@@ -502,11 +502,17 @@
             // Calcula o mês "YYYY-MM" baseado na data de vencimento
             const getInvoiceMonth = (purchaseDateStr, closingDay, dueDay) => {
                 const [y, m, d] = purchaseDateStr.split('-').map(Number);
+                
+                // Conversão vital: dados importados de JSON podem vir como texto.
+                // No Javascript, o texto "5" é MAIOR que o texto "25". Convertendo para Número, 5 < 25 funciona perfeitamente!
+                const cDay = Number(closingDay);
+                const dDay = Number(dueDay);
+
                 let billingYear = y;
                 let billingMonth = m;
 
                 // 1. Determina o mês de referência do fechamento
-                if (d >= closingDay) {
+                if (d >= cDay) {
                     billingMonth++;
                     if (billingMonth > 12) { billingMonth = 1; billingYear++; }
                 }
@@ -515,7 +521,7 @@
                 let dueYear = billingYear;
                 let dueMonth = billingMonth;
 
-                if (dueDay < closingDay) {
+                if (dDay < cDay) {
                     dueMonth++;
                     if (dueMonth > 12) { dueMonth = 1; dueYear++; }
                 }
