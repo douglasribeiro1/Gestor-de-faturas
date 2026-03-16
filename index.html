@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Gestor de Faturas</title>
     <meta name="theme-color" content="#3b82f6">
     <link rel="icon" href="./icon.png" type="image/png">
@@ -10,10 +10,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <style>
-        body { background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
+        body { 
+            background-color: #f3f4f6; 
+            -webkit-tap-highlight-color: transparent; 
+        }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
-        .tab-content { padding-bottom: 120px; } 
+        /* Aumentado o padding e adicionado suporte para a barra de navegação virtual dos celulares modernos */
+        .tab-content { 
+            padding-bottom: calc(140px + env(safe-area-inset-bottom)) !important; 
+        } 
+        /* Suporte da área segura no menu inferior */
+        .safe-bottom {
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+        }
         [v-cloak] { display: none; }
     </style>
 </head>
@@ -185,11 +195,11 @@
                                 <div class="p-3">
                                     <p class="text-lg font-bold text-gray-800 mb-2" :class="{'line-through opacity-50': payments[reportMonth]?.[personName]}">{{ formatMoney(data.total) }}</p>
                                     <div class="space-y-2">
-                                        <div v-for="item in data.items" :key="item.id" class="flex justify-between items-center text-xs text-gray-500 border-b border-gray-50 pb-1">
+                                        <div v-for="item in data.items" :key="item.id" class="flex justify-between items-center text-xs border-b border-gray-50 pb-1" :class="item.isDebt ? 'text-red-600 font-medium' : 'text-gray-500'">
                                             <span class="truncate pr-2">{{ item.desc }} {{ item.parcelaInfo }}</span>
                                             <div class="flex items-center gap-2">
-                                                <span class="font-medium text-gray-700 whitespace-nowrap">{{ formatMoney(item.amount) }}</span>
-                                                <div class="flex gap-0.5">
+                                                <span class="font-medium whitespace-nowrap" :class="item.isDebt ? 'text-red-700' : 'text-gray-700'">{{ formatMoney(item.amount) }}</span>
+                                                <div class="flex gap-0.5" v-if="!item.isDebt">
                                                     <button @click="editTransactionById(item.id)" class="text-blue-500 p-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button>
                                                     <button @click="deleteTransaction(item.id)" class="text-red-500 p-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                                                 </div>
@@ -242,6 +252,7 @@
                                 <span class="w-2 h-2 rounded-full" :style="{backgroundColor: getPersonColor(p)}"></span>
                                 <span class="font-medium">{{ p }}</span>
                                 <div class="flex gap-1 ml-1 border-l pl-1 border-gray-200">
+                                    <button @click="clearPastDebts(p)" class="text-green-500 p-1" title="Quitar dívidas passadas"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></button>
                                     <button @click="editPerson(p)" class="text-blue-500 p-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
                                     <button v-if="p !== 'Eu'" @click="removePerson(p)" class="text-red-500 p-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                                 </div>
@@ -265,7 +276,7 @@
             </transition>
         </main>
 
-        <nav class="bg-white border-t border-gray-100 fixed bottom-0 w-full max-w-md mx-auto flex justify-around p-2 pb-6 z-20 shadow-[0_-1px_10px_rgba(0,0,0,0.05)]">
+        <nav class="bg-white border-t border-gray-100 fixed bottom-0 w-full max-w-md mx-auto flex justify-around p-2 z-20 shadow-[0_-1px_10px_rgba(0,0,0,0.05)] safe-bottom">
             <button @click="currentTab = 'lancamentos'" :class="currentTab === 'lancamentos' ? 'text-blue-600' : 'text-gray-400'" class="flex flex-col items-center p-2">
                 <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                 <span class="text-[10px] font-bold">Lançar</span>
@@ -408,6 +419,8 @@
 
             const projectedInvoices = computed(() => {
                 const invs = {};
+                
+                // Passo 1: Distribui os lançamentos nos meses
                 transactions.value.forEach(tx => {
                     const card = cards.value.find(c => c.id === tx.cardId);
                     if (!card) return;
@@ -418,10 +431,54 @@
                         const m = addMonths(startMonth, i);
                         if (!invs[m]) invs[m] = { total: 0, byPerson: {} };
                         if (!invs[m].byPerson[tx.person]) invs[m].byPerson[tx.person] = { total: 0, items: [] };
-                        invs[m].total += val; invs[m].byPerson[tx.person].total += val;
-                        invs[m].byPerson[tx.person].items.push({ id: tx.id, desc: tx.description, amount: val, parcelaInfo: tx.type === 'installment' ? `(${i+1}/${tx.installments})` : '' });
+                        invs[m].total += val; 
+                        invs[m].byPerson[tx.person].total += val;
+                        invs[m].byPerson[tx.person].items.push({ 
+                            id: tx.id, desc: tx.description, amount: val, 
+                            parcelaInfo: tx.type === 'installment' ? `(${i+1}/${tx.installments})` : '',
+                            isDebt: false
+                        });
                     }
                 });
+
+                // Passo 2: Rolagem de Dívidas (Saldo Devedor)
+                const curMonthStr = new Date().toISOString().slice(0, 7);
+                const maxRolloverMonth = addMonths(curMonthStr, 2); 
+                
+                let sortedMonths = Object.keys(invs).sort();
+                for (let i = 0; i < sortedMonths.length; i++) {
+                    const month = sortedMonths[i];
+                    if (month >= maxRolloverMonth) continue;
+                    
+                    const nextMonth = addMonths(month, 1);
+                    
+                    for (const person in invs[month].byPerson) {
+                        const personData = invs[month].byPerson[person];
+                        const isPaid = payments.value[month]?.[person];
+                        
+                        if (!isPaid && personData.total > 0) {
+                            if (!invs[nextMonth]) invs[nextMonth] = { total: 0, byPerson: {} };
+                            if (!invs[nextMonth].byPerson[person]) invs[nextMonth].byPerson[person] = { total: 0, items: [] };
+                            
+                            const debtItem = {
+                                id: `debt-${month}-${person}`,
+                                desc: `⚠️ Saldo devedor de ${month.split('-')[1]}/${month.split('-')[0]}`,
+                                amount: personData.total,
+                                isDebt: true
+                            };
+                            
+                            invs[nextMonth].byPerson[person].items.unshift(debtItem);
+                            invs[nextMonth].byPerson[person].total += personData.total;
+                            invs[nextMonth].total += personData.total;
+                            
+                            if (!sortedMonths.includes(nextMonth)) {
+                                sortedMonths.push(nextMonth);
+                                sortedMonths.sort();
+                            }
+                        }
+                    }
+                }
+                
                 return invs;
             });
 
@@ -476,10 +533,30 @@
             };
             const removePerson = (p) => { if(confirm("Remover " + p + "?")) people.value = people.value.filter(x => x !== p); };
             const handlePersonChange = () => { if (formTx.person === 'NEW_PERSON') { const n = prompt("Nome:"); if(n) { people.value.push(n); formTx.person = n; } else formTx.person = 'Eu'; } };
+            
+            const clearPastDebts = (person) => {
+                if(confirm(`Deseja marcar todos os meses ANTERIORES ao mês atual como pagos para ${person}? Isso limpará os saldos devedores acumulados do passado.`)) {
+                    const curMonthStr = new Date().toISOString().slice(0, 7);
+                    let count = 0;
+                    for (const month in projectedInvoices.value) {
+                        if (month < curMonthStr) {
+                            if (projectedInvoices.value[month].byPerson[person] && projectedInvoices.value[month].byPerson[person].total > 0) {
+                                if (!payments.value[month]) payments.value[month] = {};
+                                if (!payments.value[month][person]) {
+                                    payments.value[month][person] = true;
+                                    count++;
+                                }
+                            }
+                        }
+                    }
+                    alert(`Histórico limpo! ${count} faturas passadas foram marcadas como pagas para ${person}.`);
+                }
+            };
 
             const togglePayment = (m, p) => { 
                 if (!payments.value[m]) payments.value[m] = {};
-                payments.value[m][p] = !payments.value[m][p];
+                if (payments.value[m][p]) delete payments.value[m][p];
+                else payments.value[m][p] = true;
             };
 
             const formatMoney = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -516,7 +593,7 @@
                 formCard, formTx, newPerson, isEditingTx, isEditingCard,
                 addTransaction, editTransaction, editTransactionById, cancelEditTx, deleteTransaction, 
                 addCard, editCard, cancelEditCard, deleteCard,
-                addPerson, editPerson, removePerson, handlePersonChange, togglePayment,
+                addPerson, editPerson, removePerson, handlePersonChange, clearPastDebts, togglePayment,
                 getPersonColor, currentInvoiceData, formatMoney, getCardName, exportToWhatsApp,
                 exportBackup, importBackup
             };
@@ -525,3 +602,5 @@
 </script>
 </body>
 </html>
+
+
