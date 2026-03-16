@@ -26,7 +26,8 @@
         body { background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
-        .tab-content { padding-bottom: 80px; } /* Espaço para a barra de navegação inferior */
+        /* Espaçamento aumentado de 80px para 120px para garantir que a lista passe do menu inferior */
+        .tab-content { padding-bottom: 120px; } 
     </style>
 
     <script>
@@ -56,57 +57,7 @@
     <main class="flex-1 overflow-y-auto tab-content p-4 bg-gray-50">
         <transition name="fade" mode="out-in">
             
-            <div v-if="currentTab === 'dashboard'" key="dash" class="space-y-6">
-                
-                <div v-if="dashboardAlerts.length > 0" class="bg-red-50 border-l-4 border-red-500 p-3 rounded-r-xl shadow-sm space-y-2">
-                    <h3 class="text-sm font-bold text-red-800 flex items-center gap-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                        Avisos de Vencimento
-                    </h3>
-                    <ul class="text-xs text-red-700 space-y-1.5 list-disc pl-4">
-                        <li v-for="(alert, i) in dashboardAlerts" :key="i" class="font-medium">{{ alert }}</li>
-                    </ul>
-                </div>
-
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-semibold text-gray-700">Previsão de Faturas</h2>
-                        <select v-model="dashboardFilterPerson" class="bg-blue-50 text-blue-800 font-medium border border-blue-200 text-sm rounded-lg px-2 py-1 outline-none focus:border-blue-500">
-                            <option value="Todos">Todos</option>
-                            <option v-for="p in people" :value="p" :key="p">{{ p }}</option>
-                        </select>
-                    </div>
-                    
-                    <div class="space-y-2">
-                        <div v-for="item in dashboardForecast" :key="item.month" class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
-                            <div class="flex items-center gap-2">
-                                <span class="bg-white text-gray-500 text-xs font-bold px-2 py-1 rounded shadow-sm border border-gray-200">{{ item.label }}</span>
-                            </div>
-                            <span class="font-bold text-gray-800">{{ formatMoney(item.total) }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                        <p class="text-xs text-blue-600 font-semibold uppercase">Total Fatura Atual</p>
-                        <p class="text-xl font-bold text-blue-900 mt-1">{{ formatMoney(currentMonthTotal) }}</p>
-                    </div>
-                    <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
-                        <p class="text-xs text-emerald-600 font-semibold uppercase">Pessoas Ativas</p>
-                        <p class="text-xl font-bold text-emerald-900 mt-1">{{ people.length }}</p>
-                    </div>
-                </div>
-
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <h2 class="text-md font-semibold text-gray-700 mb-3">Ações Rápidas</h2>
-                    <button @click="currentTab = 'lancamentos'" class="w-full bg-blue-600 text-white py-3 rounded-xl font-medium shadow hover:bg-blue-700 transition">
-                        + Novo Lançamento
-                    </button>
-                </div>
-            </div>
-
-            <div v-else-if="currentTab === 'lancamentos'" key="lanc" class="space-y-6">
+            <div v-if="currentTab === 'lancamentos'" key="lanc" class="space-y-6">
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <h2 class="text-lg font-semibold text-gray-700 mb-4">{{ isEditingTx ? 'Editar Lançamento' : 'Novo Lançamento' }}</h2>
                     <form @submit.prevent="addTransaction" class="space-y-3">
@@ -377,10 +328,6 @@
     </main>
 
     <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full max-w-md mx-auto flex justify-around p-2 pb-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
-        <button @click="currentTab = 'dashboard'" :class="currentTab === 'dashboard' ? 'text-blue-600' : 'text-gray-400'" class="flex flex-col items-center w-16 p-1 transition-colors">
-            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-            <span class="text-[10px] font-medium">Início</span>
-        </button>
         <button @click="currentTab = 'lancamentos'" :class="currentTab === 'lancamentos' ? 'text-blue-600' : 'text-gray-400'" class="flex flex-col items-center w-16 p-1 transition-colors">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
             <span class="text-[10px] font-medium">Lançar</span>
@@ -405,10 +352,9 @@
     const App = {
         setup() {
             // --- ESTADO ---
-            const currentTab = ref('lancamentos'); // Inicia na aba Lançamentos
+            const currentTab = ref('lancamentos'); // Apenas as abas: lancamentos, relatorios, config
             const persistenceStatus = ref('unknown');
             const reportMonth = ref(new Date().toISOString().slice(0, 7)); // YYYY-MM
-            const dashboardFilterPerson = ref('Todos'); // Filtro para a lista de previsões
 
             const cards = ref([]);
             const people = ref(['Eu']);
@@ -632,71 +578,6 @@
                 return invoices;
             });
 
-            // Lógica de Alertas Dinâmicos
-            const dashboardAlerts = computed(() => {
-                const alerts = [];
-                const today = new Date();
-                const curMonthStr = today.toISOString().slice(0, 7);
-                const todayDay = today.getDate();
-                
-                const curInv = projectedInvoices.value[curMonthStr];
-                if (curInv) {
-                    for (const person in curInv.byPerson) {
-                        if (!payments.value[curMonthStr]?.[person]) {
-                            const personData = curInv.byPerson[person];
-                            const hasDebt = personData.items.some(i => i.isDebt);
-                            
-                            const cardIds = personData.cardsUsed;
-                            const usedCards = cards.value.filter(c => cardIds.includes(c.id));
-                            if (usedCards.length > 0) {
-                                const earliestDue = Math.min(...usedCards.map(c => c.dueDay));
-                                
-                                if (hasDebt) {
-                                    alerts.push(`⚠️ ${person} possui faturas atrasadas acumuladas de meses anteriores!`);
-                                } else if (todayDay > earliestDue) {
-                                    alerts.push(`🔴 O cartão de ${person} venceu dia ${earliestDue} e a fatura não foi marcada como paga.`);
-                                } else if (todayDay >= earliestDue - 3) {
-                                    alerts.push(`⏳ Atenção: A fatura de ${person} vence em breve (dia ${earliestDue}).`);
-                                }
-                            }
-                        }
-                    }
-                }
-                return alerts;
-            });
-
-            // NOVA FUNÇÃO: Gera a lista de Previsão de Faturas (substitui o gráfico)
-            const dashboardForecast = computed(() => {
-                const forecast = [];
-                let curM = new Date().toISOString().slice(0, 7);
-                
-                for(let i=0; i<6; i++) {
-                    const [y, m] = curM.split('-');
-                    const label = `${m}/${y.slice(2)}`; // Ex: "03/26"
-                    
-                    const invoice = projectedInvoices.value[curM];
-                    let total = 0;
-                    
-                    if (invoice) {
-                        if (dashboardFilterPerson.value === 'Todos') {
-                            total = invoice.total;
-                        } else {
-                            // Pega o valor apenas da pessoa selecionada
-                            total = invoice.byPerson[dashboardFilterPerson.value]?.total || 0;
-                        }
-                    }
-                    
-                    forecast.push({ month: curM, label, total });
-                    curM = addMonths(curM, 1);
-                }
-                return forecast;
-            });
-
-            const currentMonthTotal = computed(() => {
-                const curMonth = new Date().toISOString().slice(0, 7);
-                return projectedInvoices.value[curMonth]?.total || 0;
-            });
-
             const currentInvoiceData = computed(() => {
                 return projectedInvoices.value[reportMonth.value] || null;
             });
@@ -870,7 +751,6 @@
                     });
                     formTx.description = ''; formTx.amount = null; formTx.amountType = 'total';
                     alert("Lançamento adicionado!");
-                    currentTab.value = 'dashboard';
                 }
             };
 
@@ -979,7 +859,6 @@
                             people.value.forEach(p => getPersonColor(p));
                             
                             alert("Backup restaurado com sucesso!");
-                            currentTab.value = 'dashboard';
                         } else {
                             alert("Arquivo JSON inválido.");
                         }
@@ -1001,15 +880,15 @@
             });
 
             return {
-                currentTab, persistenceStatus, reportMonth, dashboardFilterPerson,
-                cards, people, transactions, personColors, payments, dashboardAlerts,
+                currentTab, persistenceStatus, reportMonth,
+                cards, people, transactions, personColors, payments,
                 isEditingTx, isEditingCard,
                 formCard, formTx, newPerson,
                 addCard, editCard, cancelEditCard, deleteCard, 
                 addPerson, editPerson, removePerson, getPersonColor, handlePersonChange, clearPastDebts,
                 addTransaction, editTransaction, editTransactionById, cancelEditTx, deleteTransaction, togglePayment,
                 getCardName, formatMoney, formatDateTime,
-                projectedInvoices, dashboardForecast, currentMonthTotal, currentInvoiceData,
+                projectedInvoices, currentInvoiceData,
                 exportToWhatsApp, exportBackup, importBackup, requestPersistence
             };
         }
