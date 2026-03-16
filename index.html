@@ -503,30 +503,31 @@
             const getInvoiceMonth = (purchaseDateStr, closingDay, dueDay) => {
                 const [y, m, d] = purchaseDateStr.split('-').map(Number);
                 
-                // Conversão vital: dados importados de JSON podem vir como texto.
-                // No Javascript, o texto "5" é MAIOR que o texto "25". Convertendo para Número, 5 < 25 funciona perfeitamente!
-                const cDay = Number(closingDay);
-                const dDay = Number(dueDay);
+                // Conversões seguras
+                const cDay = Number(closingDay) || 31;
+                const dDay = Number(dueDay) || 10;
 
-                let billingYear = y;
-                let billingMonth = m;
+                let targetMonth = m;
+                let targetYear = y;
 
-                // 1. Determina o mês de referência do fechamento
+                // 1. O ciclo vira se a compra for feita no dia ou depois do fechamento
                 if (d >= cDay) {
-                    billingMonth++;
-                    if (billingMonth > 12) { billingMonth = 1; billingYear++; }
+                    targetMonth++;
                 }
 
-                // 2. Determina o mês de vencimento (se vence em dia menor que o fechamento, é no mês seguinte)
-                let dueYear = billingYear;
-                let dueMonth = billingMonth;
-
-                if (dDay < cDay) {
-                    dueMonth++;
-                    if (dueMonth > 12) { dueMonth = 1; dueYear++; }
+                // 2. O vencimento vira o mês se o dia de vencimento for menor ou igual ao de fechamento
+                // (Ex: Fecha 31, Vence 12 -> 12 <= 31 -> Vence no mês seguinte)
+                if (dDay <= cDay) {
+                    targetMonth++;
                 }
 
-                return `${dueYear}-${String(dueMonth).padStart(2, '0')}`;
+                // 3. Ajuste de transbordamento de meses (Dezembro -> Janeiro)
+                while (targetMonth > 12) {
+                    targetMonth -= 12;
+                    targetYear++;
+                }
+
+                return `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
             };
 
             const addMonths = (yyyyMM, monthsToAdd) => {
