@@ -5,27 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gestor de Faturas</title>
     
-    <!-- Meta tags PWA e iOS -->
     <meta name="theme-color" content="#3b82f6">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Faturas">
     <link rel="icon" href="./icon.png" type="image/png">
     <link rel="apple-touch-icon" href="./icon.png">
     
-    <!-- Link para o Manifesto Externo -->
     <link rel="manifest" href="manifest.json">
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     
-    <!-- LocalForage (IndexedDB de forma simplificada e robusta) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
@@ -51,7 +46,6 @@
 
 <div id="app" class="min-h-screen flex flex-col max-w-md mx-auto bg-white shadow-2xl relative">
     
-    <!-- Header -->
     <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
         <h1 class="text-xl font-bold flex items-center gap-2">
             <span>💳</span> Gestor de Faturas
@@ -61,14 +55,11 @@
         </span>
     </header>
 
-    <!-- MAIN CONTENT -->
     <main class="flex-1 overflow-y-auto tab-content p-4 bg-gray-50">
         <transition name="fade" mode="out-in">
             
-            <!-- ABA: DASHBOARD -->
             <div v-if="currentTab === 'dashboard'" key="dash" class="space-y-6">
                 
-                <!-- ALERTAS DE PAGAMENTO -->
                 <div v-if="dashboardAlerts.length > 0" class="bg-red-50 border-l-4 border-red-500 p-3 rounded-r-xl shadow-sm space-y-2">
                     <h3 class="text-sm font-bold text-red-800 flex items-center gap-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
@@ -103,10 +94,8 @@
                 </div>
             </div>
 
-            <!-- ABA: LANÇAMENTOS -->
             <div v-else-if="currentTab === 'lancamentos'" key="lanc" class="space-y-6">
                 
-                <!-- Form Lançamento -->
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <h2 class="text-lg font-semibold text-gray-700 mb-4">{{ isEditingTx ? 'Editar Lançamento' : 'Novo Lançamento' }}</h2>
                     <form @submit.prevent="addTransaction" class="space-y-3">
@@ -177,7 +166,6 @@
                     </form>
                 </div>
 
-                <!-- Histórico -->
                 <div>
                     <h3 class="text-md font-semibold text-gray-700 mb-3">Lançamentos Recentes</h3>
                     <div v-if="transactions.length === 0" class="text-center text-gray-500 text-sm py-4">Nenhum lançamento ainda.</div>
@@ -211,7 +199,6 @@
                 </div>
             </div>
 
-            <!-- ABA: RELATÓRIOS (FATURA E WHATSAPP) -->
             <div v-else-if="currentTab === 'relatorios'" key="rel" class="space-y-6">
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <h2 class="text-lg font-semibold text-gray-700 mb-4">Resumo da Fatura</h2>
@@ -229,9 +216,7 @@
                             <p class="text-2xl font-bold text-blue-900">{{ formatMoney(currentInvoiceData.total) }}</p>
                         </div>
 
-                        <!-- Separação por Pessoa -->
                         <div v-for="(data, personName) in currentInvoiceData.byPerson" :key="personName" class="border border-gray-200 rounded-xl overflow-hidden relative">
-                            <!-- Faixa de cor lateral -->
                             <div class="absolute left-0 top-0 bottom-0 w-1.5" :style="{ backgroundColor: getPersonColor(personName) }"></div>
                             
                             <div class="bg-gray-50 p-3 pl-4 flex justify-between items-center border-b border-gray-200">
@@ -245,7 +230,6 @@
                                     </div>
                                 </div>
                                 <div class="flex gap-1.5">
-                                    <!-- Botão de Marcar Pagamento -->
                                     <button @click="togglePayment(reportMonth, personName)" 
                                             :class="payments[reportMonth]?.[personName] ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100'"
                                             class="border px-2 py-1.5 rounded-lg shadow-sm flex flex-col items-center justify-center transition-colors min-w-[70px]">
@@ -261,7 +245,6 @@
                                     </button>
                                 </div>
                             </div>
-                            <!-- Barra de data do pagamento -->
                             <div v-if="payments[reportMonth]?.[personName]" class="bg-green-50 px-4 py-1.5 border-b border-green-100 flex items-center gap-1.5 text-[10px] text-green-700 font-medium">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 Recebido em: {{ formatDateTime(payments[reportMonth][personName]) }}
@@ -291,10 +274,8 @@
                 </div>
             </div>
 
-            <!-- ABA: CONFIGURAÇÕES -->
             <div v-else-if="currentTab === 'config'" key="conf" class="space-y-6">
                 
-                <!-- Pessoas -->
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <h2 class="text-lg font-semibold text-gray-700 mb-4">Gerenciar Pessoas</h2>
                     <div class="flex gap-2 mb-4">
@@ -320,7 +301,6 @@
                     </div>
                 </div>
 
-                <!-- Cartões -->
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <h2 class="text-lg font-semibold text-gray-700 mb-4">{{ isEditingCard ? 'Editar Cartão' : 'Meus Cartões' }}</h2>
                     <form @submit.prevent="addCard" class="space-y-3 mb-4 border-b border-gray-100 pb-4">
@@ -359,7 +339,6 @@
                     </div>
                 </div>
 
-                <!-- Backup e Dados -->
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
                     <h2 class="text-lg font-semibold text-gray-700">Backup e Dados</h2>
                     
@@ -387,7 +366,6 @@
         </transition>
     </main>
 
-    <!-- Barra de Navegação Inferior -->
     <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full max-w-md mx-auto flex justify-around p-2 pb-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
         <button @click="currentTab = 'dashboard'" :class="currentTab === 'dashboard' ? 'text-blue-600' : 'text-gray-400'" class="flex flex-col items-center w-16 p-1 transition-colors">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
@@ -531,7 +509,29 @@
             };
 
             const addMonths = (yyyyMM, monthsToAdd) => {
-<!-- ... existing code ... -->
+                const [y, m] = yyyyMM.split('-').map(Number);
+                let targetMonth = m + monthsToAdd;
+                let targetYear = y;
+                while (targetMonth > 12) {
+                    targetMonth -= 12;
+                    targetYear++;
+                }
+                return `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+            };
+
+            const projectedInvoices = computed(() => {
+                const invoices = {};
+
+                const initInvoice = (month) => {
+                    if (!invoices[month]) invoices[month] = { total: 0, byPerson: {} };
+                };
+
+                const initPerson = (month, person) => {
+                    if (!invoices[month].byPerson[person]) {
+                        invoices[month].byPerson[person] = { total: 0, items: [], cardsUsed: new Set() };
+                    }
+                };
+
                 // Pass 1: Distribuição normal das compras
                 transactions.value.forEach(tx => {
                     const card = cards.value.find(c => c.id === tx.cardId);
