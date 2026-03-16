@@ -1,7 +1,8 @@
 const CACHE_NAME = 'gestor-offline-v3';
 const urlsToCache = [
-    './gestor-cartoes.html',
+    './index.html',
     './manifest.json',
+    './icon.png',
     'https://cdn.tailwindcss.com',
     'https://unpkg.com/vue@3/dist/vue.global.prod.js',
     'https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js',
@@ -34,7 +35,7 @@ self.addEventListener('fetch', e => {
                 }).catch(() => {
                     // Se falhar (offline), tenta retornar a página principal salva
                     if (e.request.mode === 'navigate') {
-                        return caches.match('./gestor-cartoes.html');
+                        return caches.match('./index.html');
                     }
                     return new Response('Modo Offline: Verifique sua conexão.');
                 });
