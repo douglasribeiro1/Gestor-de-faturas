@@ -26,7 +26,7 @@
         <div class="text-center mb-8">
             <span class="text-6xl">💳</span>
             <h1 class="text-2xl font-bold mt-4 text-blue-600">Gestor de Faturas</h1>
-            <p class="text-gray-500 text-sm">Seus gastos sob controle</p>
+            <p class="text-gray-500 text-sm">Acesse sua conta para sincronizar</p>
         </div>
 
         <form @submit.prevent="handleAuth" class="space-y-4">
@@ -59,7 +59,7 @@
                 <span>💳</span> Gestor
             </h1>
             <div class="flex items-center gap-3">
-                <span class="text-[10px] bg-blue-700 px-2 py-1 rounded-full border border-blue-400" :title="syncStatus">
+                <span class="text-[10px] bg-blue-700 px-2 py-1 rounded-full border border-blue-400">
                     {{ syncStatus === 'syncing' ? '⌛ Salvando...' : '🔒 Nuvem' }}
                 </span>
                 <button @click="logout" class="text-xs bg-red-500 px-2 py-1 rounded-md">Sair</button>
@@ -134,7 +134,7 @@
                     </div>
 
                     <div>
-                        <h3 class="text-md font-semibold text-gray-700 mb-3">Recentes</h3>
+                        <h3 class="text-md font-semibold text-gray-700 mb-3">Lançamentos Recentes</h3>
                         <div v-if="transactions.length === 0" class="text-center text-gray-400 text-sm py-4 italic">Nenhum lançamento.</div>
                         <div class="space-y-2">
                             <div v-for="tx in [...transactions].reverse().slice(0,10)" :key="tx.id" class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm">
@@ -230,6 +230,24 @@
                             </span>
                         </div>
                     </div>
+
+                    <!-- SEÇÃO DE BACKUP -->
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                        <h2 class="text-lg font-semibold text-gray-700">Backup e Dados</h2>
+                        
+                        <button @click="exportBackup" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium shadow hover:bg-indigo-700 flex justify-center items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            Exportar Backup (JSON)
+                        </button>
+                        
+                        <div>
+                            <label class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-medium shadow hover:bg-gray-300 flex justify-center items-center gap-2 cursor-pointer">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                Restaurar Backup (JSON)
+                                <input type="file" accept=".json" class="hidden" @change="importBackup">
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </transition>
         </main>
@@ -269,14 +287,9 @@
     const auth = getAuth(fbApp);
     const db = getFirestore(fbApp);
 
-    // Persistência Offline
-    enableMultiTabIndexedDbPersistence(db).catch((err) => {
-        if (err.code == 'failed-precondition') console.log("Multi-tab não suportado");
-        else if (err.code == 'unimplemented') console.log("Navegador não suportado");
-    });
+    enableMultiTabIndexedDbPersistence(db).catch(() => {});
 
     const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
-
     const COLOR_PALETTE = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e'];
 
     createApp({
@@ -286,30 +299,23 @@
             const authMode = ref('login');
             const authForm = reactive({ email: '', password: '' });
             const syncStatus = ref('idle');
-
             const currentTab = ref('lancamentos');
             const reportMonth = ref(new Date().toISOString().slice(0, 7));
 
-            // Dados sincronizados
             const cards = ref([]);
             const people = ref(['Eu']);
             const transactions = ref([]);
             const payments = ref({});
             const personColors = ref({'Eu': '#3b82f6'});
 
-            // Formulários
             const formCard = reactive({ name: '', closingDay: 1, dueDay: 10 });
             const formTx = reactive({ description: '', amount: null, amountType: 'total', date: new Date().toISOString().slice(0, 10), cardId: '', person: 'Eu', type: 'single', installments: 2 });
             const newPerson = ref('');
             const isEditingTx = ref(null);
 
-            // --- SINCRONIZAÇÃO FIRESTORE (Otimizada: 1 Doc per User) ---
             let unsubscribeStore = null;
             const startSync = (uid) => {
-                // Caminho conforme instrução: /artifacts/{appId}/users/{userId}/{collectionName}
-                // Usamos 'appData' como coleção e 'main' como o documento único com TUDO dentro.
                 const docRef = doc(db, 'artifacts', 'gestor-faturas', 'users', uid, 'appData', 'main');
-                
                 unsubscribeStore = onSnapshot(docRef, (snap) => {
                     if (snap.exists()) {
                         const data = snap.data();
@@ -318,8 +324,6 @@
                         transactions.value = data.transactions || [];
                         payments.value = data.payments || {};
                         personColors.value = data.personColors || {'Eu': '#3b82f6'};
-                        
-                        // Garante cartão padrão se houver
                         if(!formTx.cardId && cards.value.length > 0) formTx.cardId = cards.value[0].id;
                     }
                 });
@@ -331,36 +335,25 @@
                 try {
                     const docRef = doc(db, 'artifacts', 'gestor-faturas', 'users', user.value.uid, 'appData', 'main');
                     await setDoc(docRef, {
-                        cards: cards.value,
-                        people: people.value,
-                        transactions: transactions.value,
-                        payments: payments.value,
-                        personColors: personColors.value,
-                        updatedAt: new Date().toISOString()
+                        cards: cards.value, people: people.value, transactions: transactions.value,
+                        payments: payments.value, personColors: personColors.value, updatedAt: new Date().toISOString()
                     });
                 } catch (e) { console.error(e); }
                 syncStatus.value = 'idle';
             };
 
-            // Debounce para evitar muitas escritas seguidas
             let timer;
             watch([cards, people, transactions, payments, personColors], () => {
                 clearTimeout(timer);
                 timer = setTimeout(pushToCloud, 2000);
             }, { deep: true });
 
-            // --- AUTH ---
             const handleAuth = async () => {
                 loading.value = true;
                 try {
-                    if (authMode.value === 'login') {
-                        await signInWithEmailAndPassword(auth, authForm.email, authForm.password);
-                    } else {
-                        await createUserWithEmailAndPassword(auth, authForm.email, authForm.password);
-                    }
-                } catch (e) {
-                    alert("Erro: " + e.message);
-                }
+                    if (authMode.value === 'login') await signInWithEmailAndPassword(auth, authForm.email, authForm.password);
+                    else await createUserWithEmailAndPassword(auth, authForm.email, authForm.password);
+                } catch (e) { alert("Erro: " + e.message); }
                 loading.value = false;
             };
 
@@ -369,19 +362,14 @@
             onMounted(() => {
                 onAuthStateChanged(auth, (u) => {
                     user.value = u;
-                    if (u) {
-                        startSync(u.uid);
-                    } else {
-                        if (unsubscribeStore) unsubscribeStore();
-                    }
+                    if (u) startSync(u.uid);
+                    else if (unsubscribeStore) unsubscribeStore();
                 });
             });
 
-            // --- LÓGICA DO APP (Mantida conforme original) ---
+            // Funções de Negócio
             const getPersonColor = (name) => {
-                if (!personColors.value[name]) {
-                    personColors.value[name] = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
-                }
+                if (!personColors.value[name]) personColors.value[name] = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
                 return personColors.value[name];
             };
 
@@ -409,17 +397,12 @@
                     const startMonth = getInvoiceMonth(tx.date, card.closingDay, card.dueDay);
                     const reps = tx.type === 'subscription' ? 24 : (tx.type === 'installment' ? tx.installments : 1);
                     const val = tx.type === 'installment' ? tx.amount / tx.installments : tx.amount;
-
                     for (let i = 0; i < reps; i++) {
                         const m = addMonths(startMonth, i);
                         if (!invs[m]) invs[m] = { total: 0, byPerson: {} };
                         if (!invs[m].byPerson[tx.person]) invs[m].byPerson[tx.person] = { total: 0, items: [] };
-                        invs[m].total += val;
-                        invs[m].byPerson[tx.person].total += val;
-                        invs[m].byPerson[tx.person].items.push({ 
-                            id: tx.id, desc: tx.description, amount: val, 
-                            parcelaInfo: tx.type === 'installment' ? `(${i+1}/${tx.installments})` : '' 
-                        });
+                        invs[m].total += val; invs[m].byPerson[tx.person].total += val;
+                        invs[m].byPerson[tx.person].items.push({ id: tx.id, desc: tx.description, amount: val, parcelaInfo: tx.type === 'installment' ? `(${i+1}/${tx.installments})` : '' });
                     }
                 });
                 return invs;
@@ -427,7 +410,7 @@
 
             const currentInvoiceData = computed(() => projectedInvoices.value[reportMonth.value] || null);
 
-            // Métodos de interação
+            // Ações
             const addTransaction = () => {
                 const finalAmt = (formTx.type === 'installment' && formTx.amountType === 'installment') ? formTx.amount * formTx.installments : formTx.amount;
                 if (isEditingTx.value) {
@@ -448,16 +431,11 @@
                 if (payments.value[m][p]) delete payments.value[m][p];
                 else payments.value[m][p] = true;
             };
-
-            const addCard = () => {
-                cards.value.push({ ...formCard, id: Date.now().toString() });
-                formCard.name = '';
-            };
+            const addCard = () => { cards.value.push({ ...formCard, id: Date.now().toString() }); formCard.name = ''; };
             const deleteCard = (id) => { cards.value = cards.value.filter(c => c.id !== id); };
             const addPerson = () => { if (newPerson.value && !people.value.includes(newPerson.value)) { people.value.push(newPerson.value); newPerson.value = ''; } };
             const removePerson = (p) => { people.value = people.value.filter(x => x !== p); };
             const handlePersonChange = () => { if (formTx.person === 'NEW_PERSON') { const n = prompt("Nome:"); if(n) { people.value.push(n); formTx.person = n; } else formTx.person = 'Eu'; } };
-
             const formatMoney = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
             const getCardName = (id) => cards.value.find(c => c.id === id)?.name || '...';
             const exportToWhatsApp = (name, total, items) => {
@@ -466,13 +444,57 @@
                 window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
             };
 
+            // --- SISTEMA DE BACKUP ---
+            const exportBackup = async () => {
+                const data = {
+                    appName: 'GestorDeCartoes',
+                    timestamp: new Date().toISOString(),
+                    cards: cards.value,
+                    people: people.value,
+                    transactions: transactions.value,
+                    personColors: personColors.value,
+                    payments: payments.value
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const fileName = `Backup_Faturas_${new Date().toISOString().slice(0,10)}.json`;
+                const file = new File([blob], fileName, { type: 'application/json' });
+
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try { await navigator.share({ files: [file], title: 'Backup Faturas' }); return; } catch (err) {}
+                }
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = fileName; a.click(); URL.revokeObjectURL(url);
+            };
+
+            const importBackup = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.appName === 'GestorDeCartoes' || data.transactions) {
+                            cards.value = data.cards || [];
+                            people.value = data.people || ['Eu'];
+                            transactions.value = data.transactions || [];
+                            personColors.value = data.personColors || {'Eu': '#3b82f6'};
+                            payments.value = data.payments || {};
+                            alert("Backup restaurado! Os dados serão sincronizados com o Firebase em instantes.");
+                        } else alert("Arquivo inválido.");
+                    } catch (err) { alert("Erro ao ler arquivo."); }
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            };
+
             return {
                 user, loading, authMode, authForm, handleAuth, logout, syncStatus,
                 currentTab, reportMonth, cards, people, transactions, payments,
                 formCard, formTx, newPerson, isEditingTx,
                 addTransaction, editTransaction, cancelEditTx, deleteTransaction, togglePayment,
                 addCard, deleteCard, addPerson, removePerson, handlePersonChange,
-                getPersonColor, currentInvoiceData, formatMoney, getCardName, exportToWhatsApp
+                getPersonColor, currentInvoiceData, formatMoney, getCardName, exportToWhatsApp,
+                exportBackup, importBackup
             };
         }
     }).mount('#app');
