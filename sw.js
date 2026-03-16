@@ -1,19 +1,15 @@
-const CACHE_NAME = 'gestor-offline-v4';
+const CACHE_NAME = 'gestor-offline-v5';
 const urlsToCache = [
     './index.html',
     './manifest.json',
-    './icon.png',
-    'https://cdn.tailwindcss.com',
-    'https://unpkg.com/vue@3/dist/vue.global.prod.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js',
-    'https://cdn.jsdelivr.net/npm/chart.js'
+    './icon.png'
 ];
 
 self.addEventListener('install', e => {
     self.skipWaiting();
     e.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-            return cache.addAll(urlsToCache).catch(err => console.warn('PWA: Alguns recursos externos podem não ter feito cache', err));
+            return cache.addAll(urlsToCache);
         })
     );
 });
