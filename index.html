@@ -970,7 +970,8 @@
             const updateChart = () => {
                 if(currentTab.value !== 'dashboard') return;
                 
-                nextTick(() => {
+                // Aguarda 250ms para a animação de fade do Vue terminar e o HTML do Canvas existir
+                setTimeout(() => {
                     const ctx = document.getElementById('invoiceChart');
                     if (!ctx) return;
 
@@ -1006,7 +1007,7 @@
                             scales: { y: { beginAtZero: true } }
                         }
                     });
-                });
+                }, 250); // <-- Delay adicionado aqui
             };
 
             watch(currentTab, (newTab) => {
