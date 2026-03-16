@@ -12,6 +12,9 @@
     <meta name="apple-mobile-web-app-title" content="Faturas">
     <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%233b82f6'/><text x='50%' y='50%' font-size='50' text-anchor='middle' alignment-baseline='middle' fill='white'>💳</text></svg>">
     
+    <!-- Link para o Manifesto Externo -->
+    <link rel="manifest" href="manifest.json">
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -33,81 +36,12 @@
     </style>
 
     <script>
-        // --- PWA SETUP DINÂMICO APRIMORADO ---
-        
-        // 1. Gera o Manifest como Data URI (Maior compatibilidade para instalação)
-        const appIcon = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%233b82f6'/><text x='50%' y='50%' font-size='50' text-anchor='middle' alignment-baseline='middle' fill='white'>💳</text></svg>";
-        const manifest = {
-            name: "Gestor de Faturas",
-            short_name: "Faturas",
-            display: "standalone",
-            start_url: window.location.pathname,
-            background_color: "#f3f4f6",
-            theme_color: "#3b82f6",
-            icons: [{
-                src: appIcon,
-                sizes: "192x192 512x512",
-                type: "image/svg+xml",
-                purpose: "any maskable"
-            }]
-        };
-        const manifestUrl = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
-        document.write(`<link rel="manifest" href="${manifestUrl}">`);
-
-        // 2. Registra Service Worker que cacheia TUDO (HTML atual e CDNs)
+        // Registra o Service Worker externo
         if ('serviceWorker' in navigator) {
-            const currentPage = window.location.href.split('?')[0].split('#')[0];
-            const swCode = `
-                const CACHE_NAME = 'gestor-offline-v2';
-                const urlsToCache = [
-                    '${currentPage}',
-                    'https://cdn.tailwindcss.com',
-                    'https://unpkg.com/vue@3/dist/vue.global.prod.js',
-                    'https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js',
-                    'https://cdn.jsdelivr.net/npm/chart.js'
-                ];
-
-                self.addEventListener('install', e => {
-                    self.skipWaiting();
-                    e.waitUntil(
-                        caches.open(CACHE_NAME).then(cache => {
-                            return cache.addAll(urlsToCache).catch(err => console.warn('PWA: Alguns recursos externos podem não ter feito cache', err));
-                        })
-                    );
-                });
-
-                self.addEventListener('activate', e => {
-                    e.waitUntil(self.clients.claim());
-                });
-
-                self.addEventListener('fetch', e => {
-                    if(e.request.url.startsWith('http')) {
-                        e.respondWith(
-                            caches.match(e.request).then(cached => {
-                                if (cached) return cached;
-                                
-                                return fetch(e.request).then(res => {
-                                    const cacheCopy = res.clone();
-                                    caches.open(CACHE_NAME).then(cache => cache.put(e.request, cacheCopy));
-                                    return res;
-                                }).catch(() => {
-                                    // Se falhar (offline), tenta retornar a página principal salva
-                                    if (e.request.mode === 'navigate') {
-                                        return caches.match('${currentPage}');
-                                    }
-                                    return new Response('Modo Offline: Verifique sua conexão.');
-                                });
-                            })
-                        );
-                    }
-                });
-            `;
-            const swBlob = new Blob([swCode], { type: 'application/javascript' });
-            const swUrl = URL.createObjectURL(swBlob);
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register(swUrl).then(reg => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
                     console.log('PWA Service Worker registrado com sucesso!');
-                }).catch(err => console.log('PWA Service Worker requer HTTPS ou localhost para funcionar corretamente.', err));
+                }).catch(err => console.log('PWA Service Worker falhou ao registrar.', err));
             });
         }
     </script>
