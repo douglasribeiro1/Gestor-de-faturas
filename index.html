@@ -20,8 +20,6 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         /* Estilos base e transições */
@@ -71,8 +69,22 @@
                 </div>
 
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <h2 class="text-lg font-semibold text-gray-700 mb-4">Previsão das Próximas Faturas</h2>
-                    <canvas id="invoiceChart" class="w-full h-48"></canvas>
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-gray-700">Previsão de Faturas</h2>
+                        <select v-model="dashboardFilterPerson" class="bg-blue-50 text-blue-800 font-medium border border-blue-200 text-sm rounded-lg px-2 py-1 outline-none focus:border-blue-500">
+                            <option value="Todos">Todos</option>
+                            <option v-for="p in people" :value="p" :key="p">{{ p }}</option>
+                        </select>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <div v-for="item in dashboardForecast" :key="item.month" class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <div class="flex items-center gap-2">
+                                <span class="bg-white text-gray-500 text-xs font-bold px-2 py-1 rounded shadow-sm border border-gray-200">{{ item.label }}</span>
+                            </div>
+                            <span class="font-bold text-gray-800">{{ formatMoney(item.total) }}</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -95,7 +107,6 @@
             </div>
 
             <div v-else-if="currentTab === 'lancamentos'" key="lanc" class="space-y-6">
-                
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <h2 class="text-lg font-semibold text-gray-700 mb-4">{{ isEditingTx ? 'Editar Lançamento' : 'Novo Lançamento' }}</h2>
                     <form @submit.prevent="addTransaction" class="space-y-3">
@@ -275,7 +286,6 @@
             </div>
 
             <div v-else-if="currentTab === 'config'" key="conf" class="space-y-6">
-                
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <h2 class="text-lg font-semibold text-gray-700 mb-4">Gerenciar Pessoas</h2>
                     <div class="flex gap-2 mb-4">
@@ -387,7 +397,7 @@
 </div>
 
 <script>
-    const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
+    const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
 
     // Paleta de cores para categorizar pessoas automaticamente
     const COLOR_PALETTE = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e'];
@@ -395,16 +405,16 @@
     const App = {
         setup() {
             // --- ESTADO ---
-            const currentTab = ref('lancamentos'); // Agora inicia direto na aba Lançamentos
+            const currentTab = ref('lancamentos'); // Inicia na aba Lançamentos
             const persistenceStatus = ref('unknown');
             const reportMonth = ref(new Date().toISOString().slice(0, 7)); // YYYY-MM
-            let chartInstance = null;
+            const dashboardFilterPerson = ref('Todos'); // Filtro para a lista de previsões
 
             const cards = ref([]);
             const people = ref(['Eu']);
-            const personColors = ref({'Eu': '#3b82f6'}); // Armazena a cor de cada pessoa
+            const personColors = ref({'Eu': '#3b82f6'});
             const transactions = ref([]);
-            const payments = ref({}); // Novo: Armazena o status de pagamento { '2023-10': { 'Eu': 'data ISO', ... } }
+            const payments = ref({}); 
 
             // Estados de Edição
             const isEditingTx = ref(null);
@@ -428,7 +438,7 @@
                         personColors.value = data.personColors || {'Eu': '#3b82f6'};
                         payments.value = data.payments || {};
 
-                        // Garante que todas as pessoas tenham cor (útil caso importe um backup antigo sem cores)
+                        // Garante que todas as pessoas tenham cor
                         people.value.forEach(p => getPersonColor(p));
 
                         // Preenche automaticamente o último cartão utilizado para agilizar lançamentos
@@ -452,7 +462,6 @@
                     payments: JSON.parse(JSON.stringify(payments.value))
                 };
                 await localforage.setItem(STORE_KEY, data);
-                if(currentTab.value === 'dashboard') updateChart();
             };
 
             // Salva sempre que algo mudar
@@ -494,7 +503,6 @@
                 }
 
                 // 2. O vencimento vira o mês se o dia de vencimento for menor ou igual ao de fechamento
-                // (Ex: Fecha 31, Vence 12 -> 12 <= 31 -> Vence no mês seguinte)
                 if (dDay <= cDay) {
                     targetMonth++;
                 }
@@ -563,7 +571,6 @@
                         }
                     } 
                     else if (tx.type === 'subscription') {
-                        // Projeta assinatura por 24 meses pra frente
                         for (let i = 0; i < 24; i++) {
                             const currentInvMonth = addMonths(firstInvoiceMonth, i);
                             initInvoice(currentInvMonth); initPerson(currentInvMonth, tx.person);
@@ -577,7 +584,7 @@
 
                 // Pass 2: Rolagem de Dívidas (Saldos Não Pagos)
                 const curMonthStr = new Date().toISOString().slice(0, 7);
-                const maxRolloverMonth = addMonths(curMonthStr, 2); // Limita o acumulo muito no futuro para otimização
+                const maxRolloverMonth = addMonths(curMonthStr, 2); 
                 
                 let sortedMonths = Object.keys(invoices).sort();
                 for (let i = 0; i < sortedMonths.length; i++) {
@@ -590,7 +597,6 @@
                         const personData = invoices[month].byPerson[person];
                         const isPaid = payments.value[month]?.[person];
                         
-                        // Se não pagou e tem valor, joga para o próximo mês
                         if (!isPaid && personData.total > 0) {
                             initInvoice(nextMonth);
                             initPerson(nextMonth, person);
@@ -602,7 +608,6 @@
                                 isDebt: true
                             };
                             
-                            // Passa as referências de cartões para os alertas continuarem funcionando
                             personData.cardsUsed.forEach(c => invoices[nextMonth].byPerson[person].cardsUsed.add(c));
 
                             invoices[nextMonth].byPerson[person].items.unshift(debtItem);
@@ -658,6 +663,33 @@
                     }
                 }
                 return alerts;
+            });
+
+            // NOVA FUNÇÃO: Gera a lista de Previsão de Faturas (substitui o gráfico)
+            const dashboardForecast = computed(() => {
+                const forecast = [];
+                let curM = new Date().toISOString().slice(0, 7);
+                
+                for(let i=0; i<6; i++) {
+                    const [y, m] = curM.split('-');
+                    const label = `${m}/${y.slice(2)}`; // Ex: "03/26"
+                    
+                    const invoice = projectedInvoices.value[curM];
+                    let total = 0;
+                    
+                    if (invoice) {
+                        if (dashboardFilterPerson.value === 'Todos') {
+                            total = invoice.total;
+                        } else {
+                            // Pega o valor apenas da pessoa selecionada
+                            total = invoice.byPerson[dashboardFilterPerson.value]?.total || 0;
+                        }
+                    }
+                    
+                    forecast.push({ month: curM, label, total });
+                    curM = addMonths(curM, 1);
+                }
+                return forecast;
             });
 
             const currentMonthTotal = computed(() => {
@@ -765,11 +797,9 @@
                     if (idx !== -1) {
                         people.value[idx] = trimmed;
                         
-                        // Transfere a cor original para o novo nome
                         personColors.value[trimmed] = personColors.value[oldName] || getPersonColor(oldName);
                         delete personColors.value[oldName];
 
-                        // Atualiza automaticamente as compras vinculadas a esta pessoa
                         transactions.value.forEach(tx => {
                             if (tx.person === oldName) tx.person = trimmed;
                         });
@@ -812,7 +842,6 @@
             const addTransaction = () => {
                 let finalAmount = formTx.amount;
                 
-                // Se o usuário selecionou que digitou o valor da parcela, multiplicamos para obter o total
                 if (formTx.type === 'installment' && formTx.amountType === 'installment') {
                     finalAmount = formTx.amount * formTx.installments;
                 }
@@ -848,8 +877,7 @@
             const editTransaction = (tx) => {
                 isEditingTx.value = tx.id;
                 Object.assign(formTx, tx);
-                formTx.amountType = 'total'; // Sempre carrega como total na edição para facilitar
-                // Leva o usuário para a aba de Lançamentos e rola para cima
+                formTx.amountType = 'total'; 
                 currentTab.value = 'lancamentos';
                 window.scrollTo({top: 0, behavior: 'smooth'});
             };
@@ -911,7 +939,6 @@
                 const fileName = `GestorCartoes_Backup_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.json`;
                 const file = new File([blob], fileName, { type: 'application/json' });
 
-                // Tenta usar Web Share API (Gera tela de compartilhamento nativa no celular -> Telegram, Drive, etc)
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     try {
                         await navigator.share({
@@ -925,7 +952,6 @@
                     }
                 }
                 
-                // Fallback: Download direto
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -950,7 +976,6 @@
                             personColors.value = data.personColors || {'Eu': '#3b82f6'};
                             payments.value = data.payments || {};
                             
-                            // Adiciona cor caso venha de backup antigo
                             people.value.forEach(p => getPersonColor(p));
                             
                             alert("Backup restaurado com sucesso!");
@@ -966,67 +991,17 @@
                 event.target.value = ''; // Reset
             };
 
-            // --- GRÁFICOS ---
-            const updateChart = () => {
-                if(currentTab.value !== 'dashboard') return;
-                
-                // Aguarda 250ms para a animação de fade do Vue terminar e o HTML do Canvas existir
-                setTimeout(() => {
-                    const ctx = document.getElementById('invoiceChart');
-                    if (!ctx) return;
-
-                    // Pegar próximos 6 meses
-                    const labels = [];
-                    const dataPoints = [];
-                    let curM = new Date().toISOString().slice(0, 7);
-                    
-                    for(let i=0; i<6; i++) {
-                        const [y, m] = curM.split('-');
-                        labels.push(`${m}/${y.slice(2)}`);
-                        dataPoints.push(projectedInvoices.value[curM]?.total || 0);
-                        curM = addMonths(curM, 1);
-                    }
-
-                    if (chartInstance) chartInstance.destroy();
-                    
-                    chartInstance = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: 'Total Estimado (R$)',
-                                data: dataPoints,
-                                backgroundColor: 'rgba(59, 130, 246, 0.7)',
-                                borderRadius: 6
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: { y: { beginAtZero: true } }
-                        }
-                    });
-                }, 250); // <-- Delay adicionado aqui
-            };
-
-            watch(currentTab, (newTab) => {
-                if(newTab === 'dashboard') updateChart();
-            });
-
             onMounted(async () => {
                 await loadData();
                 await requestPersistence();
                 
-                // Verifica status de persistência periodicamente
                 if (navigator.storage && navigator.storage.persisted) {
                     navigator.storage.persisted().then(p => persistenceStatus.value = p ? 'granted' : 'denied');
                 }
-                updateChart();
             });
 
             return {
-                currentTab, persistenceStatus, reportMonth,
+                currentTab, persistenceStatus, reportMonth, dashboardFilterPerson,
                 cards, people, transactions, personColors, payments, dashboardAlerts,
                 isEditingTx, isEditingCard,
                 formCard, formTx, newPerson,
@@ -1034,7 +1009,7 @@
                 addPerson, editPerson, removePerson, getPersonColor, handlePersonChange, clearPastDebts,
                 addTransaction, editTransaction, editTransactionById, cancelEditTx, deleteTransaction, togglePayment,
                 getCardName, formatMoney, formatDateTime,
-                projectedInvoices, currentMonthTotal, currentInvoiceData,
+                projectedInvoices, dashboardForecast, currentMonthTotal, currentInvoiceData,
                 exportToWhatsApp, exportBackup, importBackup, requestPersistence
             };
         }
