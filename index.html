@@ -499,43 +499,38 @@
 
             // --- LÓGICA FINANCEIRA ---
             
-            // Calcula o mês "YYYY-MM" baseado na data da compra e no dia de fechamento
-            const getInvoiceMonth = (purchaseDateStr, closingDay) => {
+            // Calcula o mês "YYYY-MM" baseado na data de vencimento
+            const getInvoiceMonth = (purchaseDateStr, closingDay, dueDay) => {
                 const [y, m, d] = purchaseDateStr.split('-').map(Number);
-                let invYear = y;
-                let invMonth = m;
-                // Se comprou no dia ou após o fechamento, cai na fatura do mês seguinte
+                let billingYear = y;
+                let billingMonth = m;
+
+                // 1. Determina o mês de referência do fechamento
                 if (d >= closingDay) {
-                    invMonth++;
-                    if (invMonth > 12) { invMonth = 1; invYear++; }
+                    billingMonth++;
+                    if (billingMonth > 12) { billingMonth = 1; billingYear++; }
                 }
-                return `${invYear}-${String(invMonth).padStart(2, '0')}`;
+
+                // 2. Determina o mês de vencimento (se vence em dia menor que o fechamento, é no mês seguinte)
+                let dueYear = billingYear;
+                let dueMonth = billingMonth;
+
+                if (dueDay < closingDay) {
+                    dueMonth++;
+                    if (dueMonth > 12) { dueMonth = 1; dueYear++; }
+                }
+
+                return `${dueYear}-${String(dueMonth).padStart(2, '0')}`;
             };
 
             const addMonths = (yyyyMM, monthsToAdd) => {
-                let [y, m] = yyyyMM.split('-').map(Number);
-                m += monthsToAdd;
-                while (m > 12) { m -= 12; y++; }
-                return `${y}-${String(m).padStart(2, '0')}`;
-            };
-
-            // Engine que projeta todas as faturas futuras
-            const projectedInvoices = computed(() => {
-                const invoices = {}; // { 'YYYY-MM': { total: 0, byPerson: { 'Eu': {total: 0, items:[], cardsUsed: Set} } } }
-
-                const initInvoice = (month) => {
-                    if (!invoices[month]) invoices[month] = { total: 0, byPerson: {} };
-                };
-                const initPerson = (month, person) => {
-                    if (!invoices[month].byPerson[person]) invoices[month].byPerson[person] = { total: 0, items: [], cardsUsed: new Set() };
-                };
-
+<!-- ... existing code ... -->
                 // Pass 1: Distribuição normal das compras
                 transactions.value.forEach(tx => {
                     const card = cards.value.find(c => c.id === tx.cardId);
                     if (!card) return;
 
-                    const firstInvoiceMonth = getInvoiceMonth(tx.date, card.closingDay);
+                    const firstInvoiceMonth = getInvoiceMonth(tx.date, card.closingDay, card.dueDay);
 
                     if (tx.type === 'single') {
                         initInvoice(firstInvoiceMonth); initPerson(firstInvoiceMonth, tx.person);
