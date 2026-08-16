@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestor-offline-v6';
+const CACHE_NAME = 'gestor-offline-v7';
 const urlsToCache = [
     './index.html',
     './manifest.json',

@@ -207,26 +207,22 @@
                 </div>
                 <div>
                     <h1 class="text-sm font-extrabold tracking-tight text-white leading-none">Gestor de Faturas</h1>
-                    <p class="text-[10px] font-medium text-slate-400 mt-0.5 truncate max-w-[170px] flex items-center gap-1.5">
-                        <span class="w-1.5 h-1.5 rounded-full" :class="syncStatus === 'syncing' ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'"></span>
-                        {{ syncStatus === 'syncing' ? 'Salvando...' : 'Nuvem Conectada' }}
+                    <p class="text-[10px] font-medium text-emerald-400 mt-0.5 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        <span>Nuvem Conectada</span>
                     </p>
                 </div>
             </div>
 
             <!-- Botões de Ação Topo -->
             <div class="flex items-center gap-2">
-                <!-- Status da Nuvem discreto e clicável -->
-                <button @click="showToast(syncStatus === 'syncing' ? 'Sincronizando com o Firebase...' : 'Todos os dados estão salvos na nuvem!', 'info')"
-                        class="p-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition" 
-                        title="Status da Sincronização">
-                    <svg v-if="syncStatus === 'syncing'" class="w-4 h-4 text-amber-400 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                <!-- Símbolo Estático de Nuvem Conectada -->
+                <div class="p-1.5 rounded-xl bg-slate-800 border border-slate-700 text-emerald-400 flex items-center justify-center" 
+                     title="Sincronizado na Nuvem">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"></path>
                     </svg>
-                    <svg v-else class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                </button>
+                </div>
 
                 <!-- Avatar / Menu Perfil -->
                 <button @click="profileModalOpen = true" 
