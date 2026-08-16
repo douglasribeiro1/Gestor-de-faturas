@@ -1,164 +1,442 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Gestor de Faturas</title>
-    <meta name="theme-color" content="#3b82f6">
+    <title>Gestor de Faturas - Controle Financeiro Inteligente</title>
+    <meta name="description" content="Gerenciador inteligente e compartilhado de faturas e cartões de crédito.">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="icon" href="./icon.png" type="image/png">
+    <link rel="apple-touch-icon" href="./icon.png">
     <link rel="manifest" href="manifest.json">
+
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        },
+                        slate: {
+                            850: '#151f32',
+                            900: '#0f172a',
+                            950: '#090d16',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Vue 3 Prod -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
     <style>
-        body { 
-            background-color: #f3f4f6; 
-            -webkit-tap-highlight-color: transparent; 
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
         }
-        .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
-        .fade-enter-from, .fade-leave-to { opacity: 0; }
-        /* Aumentado o padding e adicionado suporte para a barra de navegação virtual dos celulares modernos */
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #0b1120;
+            color: #1e293b;
+        }
+        
+        /* Suporte a tela cheia e barra de navegação virtual em smartphones */
         .tab-content { 
-            padding-bottom: calc(140px + env(safe-area-inset-bottom)) !important; 
-        } 
-        /* Suporte da área segura no menu inferior */
-        .safe-bottom {
-            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+            padding-bottom: calc(90px + env(safe-area-inset-bottom)) !important; 
         }
-        [v-cloak] { display: none; }
+        .safe-bottom {
+            padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+        }
+        .safe-top {
+            padding-top: calc(0.5rem + env(safe-area-inset-top));
+        }
+
+        /* Animações e Transições */
+        .fade-enter-active, .fade-leave-active { transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+        .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(4px); }
+
+        .modal-enter-active, .modal-leave-active { transition: all 0.25s ease; }
+        .modal-enter-from, .modal-leave-to { opacity: 0; transform: scale(0.95); }
+
+        .toast-enter-active, .toast-leave-active { transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-20px); }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
+
+        [v-cloak] { display: none !important; }
+        
+        /* Glassmorphism & Cartão Virtual */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+        }
+        .virtual-card-chip {
+            width: 32px;
+            height: 24px;
+            background: linear-gradient(135deg, #ffd700, #b8860b);
+            border-radius: 4px;
+            position: relative;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15);
+        }
     </style>
 </head>
-<body class="text-gray-800 antialiased font-sans">
+<body class="h-full antialiased text-slate-800 bg-slate-950 flex justify-center selection:bg-brand-500 selection:text-white">
 
-<div id="app" v-cloak class="min-h-screen flex flex-col max-w-md mx-auto bg-white shadow-2xl relative">
-    
-    <!-- TELA DE LOGIN -->
-    <div v-if="!user" class="flex-1 flex flex-col justify-center p-8 bg-gray-50">
-        <div class="text-center mb-8">
-            <span class="text-6xl">💳</span>
-            <h1 class="text-2xl font-bold mt-4 text-blue-600">Gestor de Faturas</h1>
-            <p class="text-gray-500 text-sm">Entre para sincronizar seus dados</p>
+<div id="app" v-cloak class="w-full max-w-md min-h-screen bg-slate-50 flex flex-col relative shadow-2xl overflow-x-hidden border-x border-slate-200/50">
+
+    <!-- TOAST NOTIFICATIONS -->
+    <transition name="toast">
+        <div v-if="toast.show" 
+             :class="[
+                 'fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl shadow-xl border flex items-center gap-3 text-xs font-semibold max-w-[90%] transition-all',
+                 toast.type === 'success' ? 'bg-emerald-950/90 text-emerald-200 border-emerald-500/30 backdrop-blur-md' :
+                 toast.type === 'error' ? 'bg-rose-950/90 text-rose-200 border-rose-500/30 backdrop-blur-md' :
+                 'bg-slate-900/90 text-slate-100 border-slate-700/50 backdrop-blur-md'
+             ]">
+            <span>{{ toast.icon }}</span>
+            <span class="truncate">{{ toast.message }}</span>
+        </div>
+    </transition>
+
+    <!-- ========================================== -->
+    <!-- TELA DE AUTENTICAÇÃO (LOGIN / REGISTRO)   -->
+    <!-- ========================================== -->
+    <div v-if="!user" class="flex-1 flex flex-col justify-between p-6 bg-gradient-to-b from-slate-900 via-slate-850 to-slate-950 text-white min-h-screen">
+        
+        <!-- Header da Marca -->
+        <div class="pt-8 text-center">
+            <div class="inline-flex p-3 rounded-3xl bg-brand-500/10 border border-brand-400/20 shadow-inner mb-4">
+                <img src="./icon.png" alt="Logo" class="w-16 h-16 rounded-2xl shadow-lg object-cover">
+            </div>
+            <h1 class="text-2xl font-black tracking-tight text-white flex items-center justify-center gap-1.5">
+                Gestor de Faturas
+            </h1>
+            <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                Controle compartilhado de cartões, faturas e divisões com facilidade e precisão.
+            </p>
         </div>
 
-        <form @submit.prevent="handleAuth" class="space-y-4">
-            <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">E-mail</label>
-                <input v-model="authForm.email" type="email" required class="w-full p-3 rounded-xl border border-gray-200 outline-none focus:border-blue-500 transition">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Senha</label>
-                <input v-model="authForm.password" type="password" required class="w-full p-3 rounded-xl border border-gray-200 outline-none focus:border-blue-500 transition">
-            </div>
+        <!-- Formulário de Auth -->
+        <div class="my-auto bg-slate-800/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-700/60 shadow-2xl space-y-4">
             
-            <button type="submit" :disabled="loading" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition disabled:opacity-50">
-                {{ loading ? 'Processando...' : (authMode === 'login' ? 'Entrar' : 'Criar Conta') }}
-            </button>
-        </form>
+            <!-- Segmented switch Login / Cadastro -->
+            <div class="grid grid-cols-2 p-1 bg-slate-900/70 rounded-2xl border border-slate-700/40 text-xs font-bold">
+                <button type="button" @click="authMode = 'login'"
+                        :class="authMode === 'login' ? 'bg-brand-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'"
+                        class="py-2.5 rounded-xl transition-all">
+                    Entrar
+                </button>
+                <button type="button" @click="authMode = 'signup'"
+                        :class="authMode === 'signup' ? 'bg-brand-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'"
+                        class="py-2.5 rounded-xl transition-all">
+                    Criar Conta
+                </button>
+            </div>
 
-        <p class="text-center mt-6 text-sm text-gray-500">
-            {{ authMode === 'login' ? 'Não tem conta?' : 'Já tem conta?' }}
-            <button @click="authMode = authMode === 'login' ? 'signup' : 'login'" class="text-blue-600 font-bold underline ml-1">
-                {{ authMode === 'login' ? 'Cadastre-se' : 'Faça Login' }}
-            </button>
-        </p>
+            <form @submit.prevent="handleAuth" class="space-y-3.5">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">E-mail</label>
+                    <div class="relative">
+                        <input v-model="authForm.email" type="email" required placeholder="seu@email.com"
+                               class="w-full bg-slate-900/90 border border-slate-700 text-white rounded-xl px-3.5 py-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition placeholder-slate-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">Senha</label>
+                    <input v-model="authForm.password" type="password" required placeholder="••••••••"
+                           class="w-full bg-slate-900/90 border border-slate-700 text-white rounded-xl px-3.5 py-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition placeholder-slate-500">
+                </div>
+
+                <button type="submit" :disabled="loading"
+                        class="w-full mt-2 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white py-3.5 rounded-xl font-bold text-sm shadow-lg shadow-brand-500/25 transition active:scale-[0.99] disabled:opacity-50 flex justify-center items-center gap-2">
+                    <svg v-if="loading" class="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span>{{ loading ? 'Processando...' : (authMode === 'login' ? 'Acessar Gestor' : 'Concluir Cadastro') }}</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center text-[11px] text-slate-500 py-2">
+            Sincronização em nuvem segura via Google Firebase
+        </div>
     </div>
 
-    <!-- APP PRINCIPAL -->
+    <!-- ========================================== -->
+    <!-- APLICAÇÃO PRINCIPAL (USUÁRIO AUTENTICADO)  -->
+    <!-- ========================================== -->
     <template v-else>
-        <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
-            <h1 class="text-xl font-bold flex items-center gap-2">
-                <span>💳</span> Gestor
-            </h1>
+
+        <!-- TOP APP BAR (HEADER REFORMULADO) -->
+        <header class="bg-slate-900 text-white px-4 py-3 sticky top-0 z-30 shadow-md border-b border-slate-800 flex items-center justify-between safe-top">
             <div class="flex items-center gap-3">
-                <span class="text-[10px] bg-blue-700 px-2 py-1 rounded-full border border-blue-400">
-                    {{ syncStatus === 'syncing' ? '⌛ Sincronizando' : '🔒 Nuvem' }}
-                </span>
-                <button @click="logout" class="text-xs bg-red-500 px-2 py-1 rounded-md">Sair</button>
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 p-0.5 shadow-sm flex items-center justify-center">
+                    <img src="./icon.png" alt="App Icon" class="w-full h-full rounded-[10px] object-cover">
+                </div>
+                <div>
+                    <h1 class="text-sm font-extrabold tracking-tight text-white leading-none">Gestor de Faturas</h1>
+                    <p class="text-[10px] font-medium text-slate-400 mt-0.5 truncate max-w-[170px] flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full" :class="syncStatus === 'syncing' ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'"></span>
+                        {{ syncStatus === 'syncing' ? 'Salvando...' : 'Nuvem Conectada' }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Botões de Ação Topo -->
+            <div class="flex items-center gap-2">
+                <!-- Status da Nuvem discreto e clicável -->
+                <button @click="showToast(syncStatus === 'syncing' ? 'Sincronizando com o Firebase...' : 'Todos os dados estão salvos na nuvem!', 'info')"
+                        class="p-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition" 
+                        title="Status da Sincronização">
+                    <svg v-if="syncStatus === 'syncing'" class="w-4 h-4 text-amber-400 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <svg v-else class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </button>
+
+                <!-- Avatar / Menu Perfil -->
+                <button @click="profileModalOpen = true" 
+                        class="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-sm border border-brand-400/30 hover:opacity-90 active:scale-95 transition">
+                    {{ (user.email || 'U').charAt(0).toUpperCase() }}
+                </button>
             </div>
         </header>
 
-        <main class="flex-1 overflow-y-auto tab-content p-4 bg-gray-50">
+        <!-- CONTEÚDO PRINCIPAL (MAIN BODY) -->
+        <main class="flex-1 overflow-y-auto tab-content p-4 space-y-4">
             <transition name="fade" mode="out-in">
-                
-                <!-- ABA LANÇAMENTOS -->
-                <div v-if="currentTab === 'lancamentos'" key="lanc" class="space-y-6">
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                        <h2 class="text-lg font-semibold text-gray-700 mb-4">{{ isEditingTx ? 'Editar Lançamento' : 'Novo Lançamento' }}</h2>
-                        <form @submit.prevent="addTransaction" class="space-y-3">
-                            <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1">Descrição</label>
-                                <input v-model="formTx.description" type="text" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500" placeholder="Ex: Netflix, Mercado">
+
+                <!-- ========================================== -->
+                <!-- ABA 1: LANÇAMENTOS (NOVO & RECENTES)       -->
+                <!-- ========================================== -->
+                <div v-if="currentTab === 'lancamentos'" key="lanc" class="space-y-4">
+                    
+                    <!-- Form Card -->
+                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80">
+                        <div class="flex items-center justify-between mb-3.5">
+                            <div class="flex items-center gap-2">
+                                <span class="p-1.5 rounded-lg bg-brand-50 text-brand-600 font-bold">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                </span>
+                                <h2 class="text-sm font-bold text-slate-800">
+                                    {{ isEditingTx ? 'Editar Lançamento' : 'Novo Lançamento' }}
+                                </h2>
                             </div>
+                            <button v-if="isEditingTx" @click="cancelEditTx" class="text-xs text-rose-500 font-bold hover:underline">
+                                Cancelar
+                            </button>
+                        </div>
+
+                        <form @submit.prevent="addTransaction" class="space-y-3">
+                            <!-- Descrição -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Descrição</label>
+                                <input v-model="formTx.description" type="text" required placeholder="Ex: Supermercado, Netflix, Restaurante"
+                                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/10 transition">
+                            </div>
+
+                            <!-- Tipo de Lançamento (Segmented Control) -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tipo de Despesa</label>
+                                <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl text-xs font-semibold text-slate-600">
+                                    <button type="button" @click="formTx.type = 'single'"
+                                            :class="formTx.type === 'single' ? 'bg-white text-brand-600 shadow-sm' : 'hover:text-slate-900'"
+                                            class="py-2 rounded-lg transition text-center">
+                                        À Vista
+                                    </button>
+                                    <button type="button" @click="formTx.type = 'installment'"
+                                            :class="formTx.type === 'installment' ? 'bg-white text-brand-600 shadow-sm' : 'hover:text-slate-900'"
+                                            class="py-2 rounded-lg transition text-center">
+                                        Parcelada
+                                    </button>
+                                    <button type="button" @click="formTx.type = 'subscription'"
+                                            :class="formTx.type === 'subscription' ? 'bg-white text-brand-600 shadow-sm' : 'hover:text-slate-900'"
+                                            class="py-2 rounded-lg transition text-center">
+                                        Mensal
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Valor e Data -->
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <div class="flex justify-between items-center mb-1">
-                                        <label class="block text-xs font-medium text-gray-500">Valor</label>
-                                        <select v-if="formTx.type === 'installment'" v-model="formTx.amountType" class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 rounded px-1 py-0.5 outline-none font-medium">
-                                            <option value="total">Total</option>
-                                            <option value="installment">Parcela</option>
+                                        <label class="block text-[11px] font-bold text-slate-500 uppercase">Valor</label>
+                                        <select v-if="formTx.type === 'installment'" v-model="formTx.amountType" 
+                                                class="text-[10px] bg-brand-50 text-brand-700 border border-brand-200 rounded-md px-1.5 py-0.5 outline-none font-bold">
+                                            <option value="total">Valor Total</option>
+                                            <option value="installment">Por Parcela</option>
                                         </select>
                                     </div>
-                                    <input v-model.number="formTx.amount" type="number" step="0.01" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500" placeholder="R$ 0,00">
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-2.5 text-xs font-bold text-slate-400">R$</span>
+                                        <input v-model.number="formTx.amount" type="number" step="0.01" required placeholder="0,00"
+                                               class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/10 transition">
+                                    </div>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-1">Data</label>
-                                    <input v-model="formTx.date" type="date" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500">
+                                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Data da Compra</label>
+                                    <input v-model="formTx.date" type="date" required
+                                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-800 outline-none focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/10 transition">
                                 </div>
                             </div>
+
+                            <!-- Parcelas (se parcelado) -->
+                            <div v-if="formTx.type === 'installment'" class="p-3 bg-brand-50/70 border border-brand-100 rounded-2xl space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-xs font-bold text-brand-900">Número de Parcelas</label>
+                                    <input v-model.number="formTx.installments" type="number" min="2" max="60" required
+                                           class="w-20 bg-white border border-brand-200 rounded-xl px-2 py-1.5 text-center font-bold text-brand-700 outline-none focus:border-brand-500 text-sm">
+                                </div>
+                                <div v-if="formTx.amount" class="text-[11px] font-semibold text-brand-700 flex items-center justify-between pt-1 border-t border-brand-200/50">
+                                    <span>Resumo do Parcelamento:</span>
+                                    <span>
+                                        {{ formTx.amountType === 'total' 
+                                            ? `${formTx.installments}x de ${formatMoney(formTx.amount / (formTx.installments || 1))}`
+                                            : `${formTx.installments}x de ${formatMoney(formTx.amount)} (Total: ${formatMoney(formTx.amount * formTx.installments)})` 
+                                        }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Cartão e Pessoa -->
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-1">Cartão</label>
-                                    <select v-model="formTx.cardId" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500">
-                                        <option disabled value="">Selecione...</option>
+                                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Cartão</label>
+                                    <select v-model="formTx.cardId" required 
+                                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-brand-500 focus:bg-white transition">
+                                        <option disabled value="">Selecione o cartão...</option>
                                         <option v-for="card in cards" :value="card.id" :key="card.id">{{ card.name }}</option>
                                     </select>
                                 </div>
+
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-1">Dono</label>
-                                    <select v-model="formTx.person" @change="handlePersonChange" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500">
+                                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Dono do Gasto</label>
+                                    <select v-model="formTx.person" @change="handlePersonSelectChange" required 
+                                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-brand-500 focus:bg-white transition">
                                         <option v-for="p in people" :value="p" :key="p">{{ p }}</option>
-                                        <option value="NEW_PERSON" class="font-bold text-blue-600">+ Nova Pessoa...</option>
+                                        <option value="NEW_PERSON" class="font-bold text-brand-600">+ Nova Pessoa...</option>
                                     </select>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
-                                    <select v-model="formTx.type" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500">
-                                        <option value="single">À Vista</option>
-                                        <option value="installment">Parcelada</option>
-                                        <option value="subscription">Mensal</option>
-                                    </select>
-                                </div>
-                                <div v-if="formTx.type === 'installment'">
-                                    <label class="block text-xs font-medium text-gray-500 mb-1">Parcelas</label>
-                                    <input v-model.number="formTx.installments" type="number" min="2" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500">
-                                </div>
-                            </div>
-                            <div class="flex gap-2 mt-2">
-                                <button v-if="isEditingTx" type="button" @click="cancelEditTx" class="w-1/3 bg-gray-200 text-gray-700 py-2.5 rounded-lg font-medium">Cancelar</button>
-                                <button type="submit" class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg font-medium shadow shadow-blue-200">
-                                    {{ isEditingTx ? 'Atualizar' : 'Salvar' }}
+
+                            <!-- Botões de Ação do Form -->
+                            <div class="pt-1 flex gap-2">
+                                <button v-if="isEditingTx" type="button" @click="cancelEditTx"
+                                        class="w-1/3 bg-slate-100 text-slate-700 py-3 rounded-2xl font-bold text-xs hover:bg-slate-200 transition">
+                                    Cancelar
+                                </button>
+                                <button type="submit" 
+                                        class="flex-1 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white py-3 rounded-2xl font-bold text-xs shadow-lg shadow-brand-500/20 active:scale-[0.99] transition flex items-center justify-center gap-2">
+                                    <span>{{ isEditingTx ? 'Atualizar Lançamento' : 'Salvar Lançamento' }}</span>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                 </button>
                             </div>
                         </form>
                     </div>
 
-                    <div>
-                        <h3 class="text-md font-semibold text-gray-700 mb-3">Recentes</h3>
-                        <div v-if="transactions.length === 0" class="text-center text-gray-400 text-sm py-4 italic">Nenhum lançamento.</div>
-                        <div class="space-y-2">
-                            <div v-for="tx in [...transactions].reverse().slice(0,10)" :key="tx.id" class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm">
-                                <div class="flex-1 pr-2">
-                                    <p class="font-medium text-gray-800 text-sm">{{ tx.description }}</p>
-                                    <p class="text-[10px] text-gray-400">
-                                        {{ getCardName(tx.cardId) }} • <span :style="{color: getPersonColor(tx.person)}">{{ tx.person }}</span>
-                                    </p>
+                    <!-- Lista de Recentes com Busca e Filtros -->
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Lançamentos Recentes</h3>
+                            <span class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                                {{ filteredTransactions.length }} total
+                            </span>
+                        </div>
+
+                        <!-- Barra de Busca -->
+                        <div class="relative">
+                            <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            <input v-model="searchQuery" type="text" placeholder="Buscar por descrição, pessoa ou cartão..."
+                                   class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200/90 rounded-2xl text-xs font-medium text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 transition shadow-sm">
+                            <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600">✕</button>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div v-if="filteredTransactions.length === 0" class="bg-white p-8 rounded-3xl text-center border border-dashed border-slate-200 text-slate-400">
+                            <span class="text-3xl block mb-2">🧾</span>
+                            <p class="text-xs font-bold text-slate-600">Nenhum lançamento encontrado</p>
+                            <p class="text-[11px] text-slate-400 mt-0.5">Cadastre suas despesas no formulário acima.</p>
+                        </div>
+
+                        <!-- Cards dos Lançamentos -->
+                        <div v-else class="space-y-2">
+                            <div v-for="tx in filteredTransactions.slice(0, 15)" :key="tx.id" 
+                                 class="bg-white p-3.5 rounded-2xl border border-slate-200/70 shadow-sm flex items-center justify-between gap-3 hover:border-brand-300 transition">
+                                
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <!-- Badge de Categoria/Tipo -->
+                                    <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0"
+                                         :style="{ backgroundColor: getPersonColor(tx.person) + '18', color: getPersonColor(tx.person) }">
+                                        {{ tx.person.charAt(0).toUpperCase() }}
+                                    </div>
+                                    
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-bold text-slate-800 truncate leading-tight">{{ tx.description }}</p>
+                                        <div class="flex items-center gap-2 mt-1 text-[10px] text-slate-400 flex-wrap">
+                                            <span class="font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded-md">{{ getCardName(tx.cardId) }}</span>
+                                            <span>•</span>
+                                            <span class="font-bold" :style="{ color: getPersonColor(tx.person) }">{{ tx.person }}</span>
+                                            <span>•</span>
+                                            <span>{{ formatDate(tx.date) }}</span>
+                                            <span v-if="tx.type === 'installment'" class="bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded-md font-bold">
+                                                {{ tx.installments }}x
+                                            </span>
+                                            <span v-else-if="tx.type === 'subscription'" class="bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-md font-bold">
+                                                Mensal
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="text-right flex items-center gap-2">
-                                    <p class="font-bold text-gray-800 text-sm">{{ formatMoney(tx.amount) }}</p>
-                                    <div class="flex gap-1">
-                                        <button @click="editTransaction(tx)" class="text-blue-500 p-1.5 bg-blue-50 rounded-lg"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button>
-                                        <button @click="deleteTransaction(tx.id)" class="text-red-500 p-1.5 bg-red-50 rounded-lg"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+
+                                <div class="text-right flex items-center gap-2 shrink-0">
+                                    <div>
+                                        <p class="text-xs font-extrabold text-slate-900">{{ formatMoney(tx.amount) }}</p>
+                                        <p v-if="tx.type === 'installment'" class="text-[9px] text-slate-400">
+                                            {{ tx.installments }}x de {{ formatMoney(tx.amount / tx.installments) }}
+                                        </p>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <button @click="editTransaction(tx)" class="p-1.5 text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg transition" title="Editar">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                        </button>
+                                        <button @click="confirmDeleteTx(tx.id)" class="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition" title="Excluir">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -166,42 +444,138 @@
                     </div>
                 </div>
 
-                <!-- ABA RELATÓRIOS -->
-                <div v-else-if="currentTab === 'relatorios'" key="rel" class="space-y-6">
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                        <h2 class="text-lg font-semibold text-gray-700 mb-4">Fatura Mensal</h2>
-                        <input v-model="reportMonth" type="month" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none mb-6">
+                <!-- ========================================== -->
+                <!-- ABA 2: FATURAS & RELATÓRIOS (POR PESSOA)  -->
+                <!-- ========================================== -->
+                <div v-else-if="currentTab === 'relatorios'" key="rel" class="space-y-4">
+                    
+                    <!-- Seletor Rápido de Mês com Botões < e > -->
+                    <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                        <button @click="navigateMonth(-1)" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition" title="Mês Anterior">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" stroke-linecap="round" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        
+                        <div class="text-center">
+                            <p class="text-xs font-black text-slate-800 capitalize">{{ formatMonthLabel(reportMonth) }}</p>
+                            <input v-model="reportMonth" type="month" class="text-[10px] text-brand-600 font-bold bg-transparent outline-none cursor-pointer">
+                        </div>
 
-                        <div v-if="!currentInvoiceData" class="text-center text-gray-400 py-8 italic">Nada para este mês.</div>
-                        <div v-else class="space-y-4">
-                            <div class="p-4 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-100">
-                                <p class="text-xs opacity-80">Total Geral</p>
-                                <p class="text-2xl font-bold">{{ formatMoney(currentInvoiceData.total) }}</p>
+                        <button @click="navigateMonth(1)" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition" title="Próximo Mês">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" stroke-linecap="round" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                    </div>
+
+                    <!-- Caso não haja dados no mês -->
+                    <div v-if="!currentInvoiceData || currentInvoiceData.total === 0" class="bg-white p-8 rounded-3xl text-center border border-slate-200 shadow-sm text-slate-400">
+                        <span class="text-3xl block mb-2">🌴</span>
+                        <p class="text-xs font-bold text-slate-700">Nenhum gasto registrado para este mês</p>
+                        <p class="text-[11px] text-slate-400 mt-1">Navegue para outros meses ou adicione novos lançamentos.</p>
+                    </div>
+
+                    <!-- Resumo da Fatura & Cards por Pessoa -->
+                    <div v-else class="space-y-4">
+                        
+                        <!-- Hero Total da Fatura -->
+                        <div class="p-5 bg-gradient-to-br from-slate-900 via-slate-850 to-brand-950 rounded-3xl text-white shadow-xl border border-slate-800 relative overflow-hidden">
+                            <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl"></div>
+                            
+                            <div class="flex items-center justify-between text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">
+                                <span>Total da Fatura</span>
+                                <span class="bg-brand-500/20 text-brand-300 border border-brand-400/30 px-2 py-0.5 rounded-full text-[10px]">
+                                    {{ Object.keys(currentInvoiceData.byPerson).length }} devedor(es)
+                                </span>
                             </div>
+                            
+                            <p class="text-3xl font-black tracking-tight text-white mt-1">
+                                {{ formatMoney(currentInvoiceData.total) }}
+                            </p>
 
-                            <div v-for="(data, personName) in currentInvoiceData.byPerson" :key="personName" class="border border-gray-100 rounded-2xl overflow-hidden shadow-sm bg-white">
-                                <div class="bg-gray-50 p-3 flex justify-between items-center border-b border-gray-100">
-                                    <div class="flex items-center gap-2">
-                                        <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: getPersonColor(personName) }"></span>
-                                        <span class="font-bold text-sm text-gray-700">{{ personName }}</span>
+                            <!-- Barra de Distribuição de Gastos por Pessoa -->
+                            <div class="mt-4 pt-3 border-t border-slate-800">
+                                <div class="flex justify-between text-[10px] text-slate-400 font-semibold mb-1.5">
+                                    <span>Divisão do Mês</span>
+                                    <span>{{ reportStats.percentPaid }}% pago</span>
+                                </div>
+                                <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden flex">
+                                    <div v-for="(data, pName) in currentInvoiceData.byPerson" :key="pName"
+                                         :style="{ width: (data.total / currentInvoiceData.total * 100) + '%', backgroundColor: getPersonColor(pName) }"
+                                         :title="pName + ': ' + formatMoney(data.total)"
+                                         class="h-full transition-all"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Cards por Pessoa -->
+                        <div class="space-y-3">
+                            <div v-for="(data, personName) in currentInvoiceData.byPerson" :key="personName"
+                                 class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden transition hover:shadow-md">
+                                
+                                <!-- Header do Card da Pessoa -->
+                                <div class="p-4 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
+                                    <div class="flex items-center gap-2.5">
+                                        <span class="w-3.5 h-3.5 rounded-full ring-4 ring-white shadow-sm" 
+                                              :style="{ backgroundColor: getPersonColor(personName) }"></span>
+                                        <div>
+                                            <h4 class="text-xs font-black text-slate-800">{{ personName }}</h4>
+                                            <p class="text-[10px] text-slate-400 font-semibold">
+                                                {{ data.items.length }} {{ data.items.length === 1 ? 'item' : 'itens' }}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div class="flex gap-2">
-                                        <button @click="togglePayment(reportMonth, personName)" class="text-[10px] px-2 py-1 rounded-full font-bold transition" :class="payments[reportMonth]?.[personName] ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-500'">
-                                            {{ payments[reportMonth]?.[personName] ? 'PAGO' : 'PENDENTE' }}
+
+                                    <div class="flex items-center gap-2">
+                                        <!-- Botão Status Pago/Pendente -->
+                                        <button @click="togglePayment(reportMonth, personName)" 
+                                                :class="payments[reportMonth]?.[personName] 
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
+                                                    : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'"
+                                                class="text-[10px] font-black px-2.5 py-1 rounded-full border transition flex items-center gap-1">
+                                            <span v-if="payments[reportMonth]?.[personName]">✓ PAGO</span>
+                                            <span v-else>⌛ PENDENTE</span>
                                         </button>
-                                        <button @click="exportToWhatsApp(personName, data.total, data.items)" class="bg-green-500 text-white p-1.5 rounded-lg"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.418-.099.823z"/></svg></button>
+
+                                        <!-- Botão WhatsApp Cobrança -->
+                                        <button @click="exportToWhatsApp(personName, data.total, data.items)"
+                                                class="bg-emerald-600 hover:bg-emerald-500 text-white p-2 rounded-xl shadow-sm transition active:scale-95 flex items-center justify-center"
+                                                title="Enviar cobrança detalhada no WhatsApp">
+                                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.418-.099.823z"/></svg>
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="p-3">
-                                    <p class="text-lg font-bold text-gray-800 mb-2" :class="{'line-through opacity-50': payments[reportMonth]?.[personName]}">{{ formatMoney(data.total) }}</p>
-                                    <div class="space-y-2">
-                                        <div v-for="item in data.items" :key="item.id" class="flex justify-between items-center text-xs border-b border-gray-50 pb-1" :class="item.isDebt ? 'text-red-600 font-medium' : 'text-gray-500'">
-                                            <span class="truncate pr-2">{{ item.desc }} {{ item.parcelaInfo }}</span>
-                                            <div class="flex items-center gap-2">
-                                                <span class="font-medium whitespace-nowrap" :class="item.isDebt ? 'text-red-700' : 'text-gray-700'">{{ formatMoney(item.amount) }}</span>
-                                                <div class="flex gap-0.5" v-if="!item.isDebt">
-                                                    <button @click="editTransactionById(item.id)" class="text-blue-500 p-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button>
-                                                    <button @click="deleteTransaction(item.id)" class="text-red-500 p-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+
+                                <!-- Valor Total e Lista de Itens -->
+                                <div class="p-4 space-y-3">
+                                    <div class="flex justify-between items-baseline">
+                                        <span class="text-[11px] font-bold text-slate-400 uppercase">Subtotal</span>
+                                        <span class="text-lg font-black text-slate-900" :class="{'line-through text-slate-400': payments[reportMonth]?.[personName]}">
+                                            {{ formatMoney(data.total) }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Lista discriminada -->
+                                    <div class="space-y-1.5 pt-2 border-t border-slate-100">
+                                        <div v-for="item in data.items" :key="item.id" 
+                                             :class="item.isDebt ? 'bg-rose-50/80 border-rose-200 text-rose-800' : 'text-slate-700'"
+                                             class="flex justify-between items-center text-xs p-2 rounded-xl border border-transparent">
+                                            
+                                            <div class="truncate pr-2">
+                                                <span class="font-bold">{{ item.desc }}</span>
+                                                <span v-if="item.parcelaInfo" class="text-[10px] text-slate-500 font-semibold ml-1">
+                                                    {{ item.parcelaInfo }}
+                                                </span>
+                                            </div>
+
+                                            <div class="flex items-center gap-2 shrink-0">
+                                                <span class="font-extrabold" :class="item.isDebt ? 'text-rose-700' : 'text-slate-900'">
+                                                    {{ formatMoney(item.amount) }}
+                                                </span>
+                                                <div v-if="!item.isDebt" class="flex items-center gap-1">
+                                                    <button @click="editTransactionById(item.id)" class="p-1 text-brand-600 hover:bg-brand-50 rounded" title="Editar">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                                    </button>
+                                                    <button @click="confirmDeleteTx(item.id)" class="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Excluir">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -212,87 +586,292 @@
                     </div>
                 </div>
 
-                <!-- ABA AJUSTES -->
-                <div v-else-if="currentTab === 'config'" key="conf" class="space-y-6">
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                        <h2 class="text-lg font-semibold text-gray-700 mb-4">{{ isEditingCard ? 'Editar Cartão' : 'Meus Cartões' }}</h2>
-                        <form @submit.prevent="addCard" class="space-y-2 mb-4 border-b pb-4">
-                            <input v-model="formCard.name" placeholder="Nome (Ex: Nubank)" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none">
-                            <div class="grid grid-cols-2 gap-2">
-                                <input v-model.number="formCard.closingDay" type="number" placeholder="Fecha dia" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none">
-                                <input v-model.number="formCard.dueDay" type="number" placeholder="Vence dia" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none">
+                <!-- ========================================== -->
+                <!-- ABA 3: AJUSTES & CONFIGURAÇÕES             -->
+                <!-- ========================================== -->
+                <div v-else-if="currentTab === 'config'" key="conf" class="space-y-4">
+                    
+                    <!-- Gerenciar Cartões de Crédito (com layout de Cartão Virtual) -->
+                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span class="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 font-bold">💳</span>
+                                {{ isEditingCard ? 'Editar Cartão' : 'Meus Cartões de Crédito' }}
+                            </h2>
+                            <span class="text-[11px] font-bold text-slate-400">{{ cards.length }} cadastrado(s)</span>
+                        </div>
+
+                        <!-- Form de Cartão -->
+                        <form @submit.prevent="addCard" class="space-y-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200/60">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Nome do Cartão / Banco</label>
+                                <input v-model="formCard.name" required placeholder="Ex: Nubank Ultravioleta, C6 Black, Itaú"
+                                       class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:border-brand-500">
                             </div>
-                            <div class="flex gap-2">
-                                <button v-if="isEditingCard" type="button" @click="cancelEditCard" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg text-sm font-bold">Cancelar</button>
-                                <button type="submit" class="flex-[2] bg-gray-800 text-white py-2 rounded-lg text-sm font-bold">{{ isEditingCard ? 'Atualizar' : 'Adicionar' }}</button>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Dia Fechamento</label>
+                                    <input v-model.number="formCard.closingDay" type="number" min="1" max="31" required placeholder="Dia"
+                                           class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:border-brand-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Dia Vencimento</label>
+                                    <input v-model.number="formCard.dueDay" type="number" min="1" max="31" required placeholder="Dia"
+                                           class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:border-brand-500">
+                                </div>
+                            </div>
+                            <div class="flex gap-2 pt-1">
+                                <button v-if="isEditingCard" type="button" @click="cancelEditCard"
+                                        class="w-1/3 bg-slate-200 text-slate-700 py-2 rounded-xl text-xs font-bold">
+                                    Cancelar
+                                </button>
+                                <button type="submit" 
+                                        class="flex-1 bg-slate-900 text-white py-2 rounded-xl text-xs font-bold hover:bg-slate-800 transition">
+                                    {{ isEditingCard ? 'Salvar Alterações' : '+ Adicionar Cartão' }}
+                                </button>
                             </div>
                         </form>
-                        <div class="space-y-2">
-                            <div v-for="card in cards" :key="card.id" class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+
+                        <!-- Visualização de Cartões Virtuais -->
+                        <div class="space-y-2.5">
+                            <div v-for="card in cards" :key="card.id"
+                                 class="p-4 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-indigo-950 text-white shadow-md border border-slate-700/50 flex items-center justify-between">
+                                
                                 <div>
-                                    <p class="font-bold text-sm">{{ card.name }}</p>
-                                    <p class="text-[10px] text-gray-500">Ciclo: {{card.closingDay}} até {{card.dueDay}}</p>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <div class="virtual-card-chip"></div>
+                                        <p class="font-extrabold text-sm text-white tracking-wide">{{ card.name }}</p>
+                                    </div>
+                                    <p class="text-[11px] text-slate-300 font-medium">
+                                        Fecha todo dia <span class="font-bold text-brand-300">{{ card.closingDay }}</span> • Vence dia <span class="font-bold text-emerald-300">{{ card.dueDay }}</span>
+                                    </p>
                                 </div>
-                                <div class="flex gap-2">
-                                    <button @click="editCard(card)" class="text-blue-500 p-2 bg-blue-100 rounded-lg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
-                                    <button @click="deleteCard(card.id)" class="text-red-500 p-2 bg-red-100 rounded-lg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+
+                                <div class="flex items-center gap-1.5">
+                                    <button @click="editCard(card)" class="p-2 text-brand-300 bg-slate-800 hover:bg-slate-700 rounded-xl transition" title="Editar Cartão">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                    </button>
+                                    <button @click="confirmDeleteCard(card.id)" class="p-2 text-rose-400 bg-slate-800 hover:bg-slate-700 rounded-xl transition" title="Excluir Cartão">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                        <h2 class="text-lg font-semibold text-gray-700 mb-4">Gerenciar Pessoas</h2>
-                        <div class="flex gap-2 mb-4">
-                            <input v-model="newPerson" placeholder="Novo nome" class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none">
-                            <button @click="addPerson" class="bg-blue-600 text-white px-4 rounded-lg font-bold">+</button>
+                    <!-- Gerenciar Pessoas e Divisões -->
+                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80 space-y-3.5">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span class="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 font-bold">👥</span>
+                                Pessoas e Devedores
+                            </h2>
+                            <span class="text-[11px] font-bold text-slate-400">{{ people.length }} pessoa(s)</span>
                         </div>
-                        <div class="flex flex-wrap gap-2">
-                            <span v-for="p in people" :key="p" class="bg-gray-50 border border-gray-100 pl-3 pr-2 py-1.5 rounded-full text-xs flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full" :style="{backgroundColor: getPersonColor(p)}"></span>
-                                <span class="font-medium">{{ p }}</span>
-                                <div class="flex gap-1 ml-1 border-l pl-1 border-gray-200">
-                                    <button @click="clearPastDebts(p)" class="text-green-500 p-1" title="Quitar dívidas passadas"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></button>
-                                    <button @click="editPerson(p)" class="text-blue-500 p-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
-                                    <button v-if="p !== 'Eu'" @click="removePerson(p)" class="text-red-500 p-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+
+                        <!-- Input Rápido Nova Pessoa -->
+                        <div class="flex gap-2">
+                            <input v-model="newPerson" @keyup.enter="addPerson" placeholder="Nome da pessoa (Ex: Maria, Carlos)" 
+                                   class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold outline-none focus:border-brand-500">
+                            <button @click="addPerson" class="bg-brand-600 hover:bg-brand-500 text-white px-4 rounded-xl font-black text-sm shadow-sm transition">
+                                +
+                            </button>
+                        </div>
+
+                        <!-- Lista de Pessoas com Tags -->
+                        <div class="flex flex-wrap gap-2 pt-1">
+                            <div v-for="p in people" :key="p" 
+                                 class="bg-slate-50 border border-slate-200/80 pl-3 pr-2 py-1.5 rounded-2xl text-xs flex items-center gap-2 shadow-sm">
+                                <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: getPersonColor(p) }"></span>
+                                <span class="font-extrabold text-slate-800">{{ p }}</span>
+                                
+                                <div class="flex items-center gap-1 ml-1 border-l pl-1.5 border-slate-200">
+                                    <button @click="clearPastDebts(p)" class="p-1 text-emerald-600 hover:bg-emerald-50 rounded" title="Quitar todas as dívidas passadas">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    </button>
+                                    <button @click="openEditPersonModal(p)" class="p-1 text-brand-600 hover:bg-brand-50 rounded" title="Editar Nome">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                    </button>
+                                    <button v-if="p !== 'Eu'" @click="confirmRemovePerson(p)" class="p-1 text-rose-500 hover:bg-rose-50 rounded" title="Remover">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
                                 </div>
-                            </span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-                        <h2 class="text-lg font-semibold text-gray-700">Backup Manual</h2>
-                        <button @click="exportBackup" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium shadow hover:bg-indigo-700 flex justify-center items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                            Exportar Backup (JSON)
-                        </button>
-                        <label class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-medium flex justify-center items-center gap-2 cursor-pointer">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            Importar Backup (JSON)
-                            <input type="file" accept=".json" class="hidden" @change="importBackup">
-                        </label>
+                    <!-- Configuração da Chave PIX (Funcionalidade Nova) -->
+                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span class="p-1.5 rounded-lg bg-teal-50 text-teal-600 font-bold">⚡</span>
+                                Chave PIX para Cobrança
+                            </h2>
+                        </div>
+                        <p class="text-[11px] text-slate-500 leading-relaxed">
+                            Cadastre sua chave PIX para ser enviada automaticamente nos relatórios de cobrança do WhatsApp.
+                        </p>
+                        <div class="flex gap-2">
+                            <input v-model="userPixKey" placeholder="CPF, e-mail, telefone ou chave aleatória"
+                                   class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-medium outline-none focus:border-brand-500">
+                            <button @click="savePixKey" class="bg-slate-900 text-white px-4 rounded-xl text-xs font-bold hover:bg-slate-800 transition">
+                                Salvar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Backup e Restauração de Dados -->
+                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80 space-y-3">
+                        <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <span class="p-1.5 rounded-lg bg-purple-50 text-purple-600 font-bold">💾</span>
+                            Backup e Segurança dos Dados
+                        </h2>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button @click="exportBackup" 
+                                    class="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-2xl font-bold text-xs shadow-sm flex flex-col items-center justify-center gap-1.5 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                <span>Exportar JSON</span>
+                            </button>
+
+                            <label class="bg-slate-100 hover:bg-slate-200 text-slate-700 p-3 rounded-2xl font-bold text-xs flex flex-col items-center justify-center gap-1.5 cursor-pointer transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                <span>Restaurar JSON</span>
+                                <input type="file" accept=".json" class="hidden" @change="importBackup">
+                            </label>
+                        </div>
                     </div>
                 </div>
             </transition>
         </main>
 
-        <nav class="bg-white border-t border-gray-100 fixed bottom-0 w-full max-w-md mx-auto flex justify-around p-2 z-20 shadow-[0_-1px_10px_rgba(0,0,0,0.05)] safe-bottom">
-            <button @click="currentTab = 'lancamentos'" :class="currentTab === 'lancamentos' ? 'text-blue-600' : 'text-gray-400'" class="flex flex-col items-center p-2">
-                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                <span class="text-[10px] font-bold">Lançar</span>
+        <!-- ========================================== -->
+        <!-- BOTTOM NAVIGATION BAR (MODERNO E SEGURO)   -->
+        <!-- ========================================== -->
+        <nav class="bg-white/95 backdrop-blur-lg border-t border-slate-200/80 fixed bottom-0 w-full max-w-md mx-auto flex justify-around p-2 z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] safe-bottom">
+            
+            <!-- Botão 1: Lançar -->
+            <button @click="currentTab = 'lancamentos'" 
+                    :class="currentTab === 'lancamentos' ? 'text-brand-600' : 'text-slate-400 hover:text-slate-600'" 
+                    class="flex-1 flex flex-col items-center py-1.5 relative transition">
+                <div :class="currentTab === 'lancamentos' ? 'bg-brand-50 text-brand-600' : 'text-slate-400'"
+                     class="p-1.5 rounded-xl transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                </div>
+                <span class="text-[10px] font-extrabold mt-0.5">Lançar</span>
             </button>
-            <button @click="currentTab = 'relatorios'" :class="currentTab === 'relatorios' ? 'text-blue-600' : 'text-gray-400'" class="flex flex-col items-center p-2">
-                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                <span class="text-[10px] font-bold">Faturas</span>
+
+            <!-- Botão 2: Faturas -->
+            <button @click="currentTab = 'relatorios'" 
+                    :class="currentTab === 'relatorios' ? 'text-brand-600' : 'text-slate-400 hover:text-slate-600'" 
+                    class="flex-1 flex flex-col items-center py-1.5 relative transition">
+                <div :class="currentTab === 'relatorios' ? 'bg-brand-50 text-brand-600' : 'text-slate-400'"
+                     class="p-1.5 rounded-xl transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+                <span class="text-[10px] font-extrabold mt-0.5">Faturas</span>
             </button>
-            <button @click="currentTab = 'config'" :class="currentTab === 'config' ? 'text-blue-600' : 'text-gray-400'" class="flex flex-col items-center p-2">
-                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
-                <span class="text-[10px] font-bold">Ajustes</span>
+
+            <!-- Botão 3: Ajustes -->
+            <button @click="currentTab = 'config'" 
+                    :class="currentTab === 'config' ? 'text-brand-600' : 'text-slate-400 hover:text-slate-600'" 
+                    class="flex-1 flex flex-col items-center py-1.5 relative transition">
+                <div :class="currentTab === 'config' ? 'bg-brand-50 text-brand-600' : 'text-slate-400'"
+                     class="p-1.5 rounded-xl transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+                </div>
+                <span class="text-[10px] font-extrabold mt-0.5">Ajustes</span>
             </button>
         </nav>
+
+        <!-- ========================================== -->
+        <!-- MODAL DO PERFIL DO USUÁRIO                 -->
+        <!-- ========================================== -->
+        <div v-if="profileModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+            <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl border border-slate-200 space-y-4 animate-scaleUp">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h3 class="text-sm font-extrabold text-slate-800">Conta & Sincronização</h3>
+                    <button @click="profileModalOpen = false" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+                </div>
+
+                <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl">
+                    <div class="w-10 h-10 rounded-2xl bg-brand-600 text-white font-black text-sm flex items-center justify-center">
+                        {{ (user.email || 'U').charAt(0).toUpperCase() }}
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold text-slate-800 truncate">{{ user.email }}</p>
+                        <p class="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-0.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Conectado ao Firebase
+                        </p>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <button @click="exportBackup(); profileModalOpen = false" 
+                            class="w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center justify-between transition">
+                        <span>Fazer Backup dos Dados</span>
+                        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    </button>
+                    
+                    <button @click="logout" 
+                            class="w-full py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold flex items-center justify-between transition">
+                        <span>Sair da Conta (Logout)</span>
+                        <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- MODAL GENÉRICO DE CONFIRMAÇÃO              -->
+        <!-- ========================================== -->
+        <div v-if="confirmDialog.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+            <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl border border-slate-200 space-y-4">
+                <div class="flex items-center gap-3">
+                    <span class="p-2.5 rounded-2xl bg-rose-50 text-rose-600 text-xl font-bold">⚠️</span>
+                    <div>
+                        <h4 class="text-sm font-extrabold text-slate-800">{{ confirmDialog.title }}</h4>
+                        <p class="text-xs text-slate-500 mt-0.5">{{ confirmDialog.message }}</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 pt-2">
+                    <button @click="confirmDialog.show = false" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+                        Cancelar
+                    </button>
+                    <button @click="confirmDialog.onConfirm" class="py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition">
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- MODAL DE INPUT (RENOMEAR / NOVA PESSOA)    -->
+        <!-- ========================================== -->
+        <div v-if="promptDialog.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+            <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl border border-slate-200 space-y-4">
+                <div>
+                    <h4 class="text-sm font-extrabold text-slate-800">{{ promptDialog.title }}</h4>
+                    <p class="text-xs text-slate-500 mt-0.5">{{ promptDialog.message }}</p>
+                </div>
+                <input v-model="promptDialog.value" @keyup.enter="promptDialog.onConfirm" autofocus
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold outline-none focus:border-brand-500">
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <button @click="promptDialog.show = false" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+                        Cancelar
+                    </button>
+                    <button @click="promptDialog.onConfirm" class="py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold transition">
+                        Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </template>
 </div>
 
+<!-- ========================================== -->
+<!-- SCRIPTS: FIREBASE, PERSISTÊNCIA & VUE LOGIC-->
+<!-- ========================================== -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
@@ -314,7 +893,7 @@
     enableMultiTabIndexedDbPersistence(db).catch(() => {});
 
     const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
-    const COLOR_PALETTE = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e'];
+    const COLOR_PALETTE = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2', '#4f46e5', '#db2777', '#ea580c', '#16a34a', '#9333ea'];
 
     createApp({
         setup() {
@@ -325,21 +904,50 @@
             const syncStatus = ref('idle');
             const currentTab = ref('lancamentos');
             const reportMonth = ref(new Date().toISOString().slice(0, 7));
+            const searchQuery = ref('');
+            const profileModalOpen = ref(false);
+            const userPixKey = ref('');
 
+            // Estrutura de dados principal
             const cards = ref([]);
             const people = ref(['Eu']);
             const transactions = ref([]);
             const payments = ref({});
-            const personColors = ref({'Eu': '#3b82f6'});
+            const personColors = ref({'Eu': '#2563eb'});
 
+            // Formulários
             const formCard = reactive({ name: '', closingDay: 1, dueDay: 10 });
-            const formTx = reactive({ description: '', amount: null, amountType: 'total', date: new Date().toISOString().slice(0, 10), cardId: '', person: 'Eu', type: 'single', installments: 2 });
+            const formTx = reactive({ 
+                description: '', 
+                amount: null, 
+                amountType: 'total', 
+                date: new Date().toISOString().slice(0, 10), 
+                cardId: '', 
+                person: 'Eu', 
+                type: 'single', 
+                installments: 2 
+            });
             const newPerson = ref('');
             
             const isEditingTx = ref(null);
             const isEditingCard = ref(null);
 
-            // Sincronização
+            // Sistema de Toast e Modais Elegantes
+            const toast = reactive({ show: false, message: '', type: 'info', icon: 'ℹ️' });
+            let toastTimer = null;
+            const showToast = (message, type = 'info') => {
+                clearTimeout(toastTimer);
+                toast.message = message;
+                toast.type = type;
+                toast.icon = type === 'success' ? '✅' : (type === 'error' ? '❌' : 'ℹ️');
+                toast.show = true;
+                toastTimer = setTimeout(() => { toast.show = false; }, 3000);
+            };
+
+            const confirmDialog = reactive({ show: false, title: '', message: '', onConfirm: null });
+            const promptDialog = reactive({ show: false, title: '', message: '', value: '', onConfirm: null });
+
+            // Sincronização com Cloud Firestore
             let unsubscribeStore = null;
             const startSync = (uid) => {
                 const docRef = doc(db, 'artifacts', 'gestor-faturas', 'users', uid, 'appData', 'main');
@@ -350,8 +958,9 @@
                         people.value = data.people || ['Eu'];
                         transactions.value = data.transactions || [];
                         payments.value = data.payments || {};
-                        personColors.value = data.personColors || {'Eu': '#3b82f6'};
-                        if(!formTx.cardId && cards.value.length > 0) formTx.cardId = cards.value[0].id;
+                        personColors.value = data.personColors || {'Eu': '#2563eb'};
+                        userPixKey.value = data.pixKey || '';
+                        if (!formTx.cardId && cards.value.length > 0) formTx.cardId = cards.value[0].id;
                     }
                 });
             };
@@ -362,30 +971,48 @@
                 try {
                     const docRef = doc(db, 'artifacts', 'gestor-faturas', 'users', user.value.uid, 'appData', 'main');
                     await setDoc(docRef, {
-                        cards: cards.value, people: people.value, transactions: transactions.value,
-                        payments: payments.value, personColors: personColors.value, updatedAt: new Date().toISOString()
+                        cards: cards.value, 
+                        people: people.value, 
+                        transactions: transactions.value,
+                        payments: payments.value, 
+                        personColors: personColors.value, 
+                        pixKey: userPixKey.value,
+                        updatedAt: new Date().toISOString()
                     });
-                } catch (e) { console.error(e); }
+                } catch (e) { 
+                    console.error("Erro ao sincronizar com nuvem:", e); 
+                }
                 syncStatus.value = 'idle';
             };
 
             let timer;
-            watch([cards, people, transactions, payments, personColors], () => {
+            watch([cards, people, transactions, payments, personColors, userPixKey], () => {
                 clearTimeout(timer);
-                timer = setTimeout(pushToCloud, 2000);
+                timer = setTimeout(pushToCloud, 1800);
             }, { deep: true });
 
-            // Auth
+            // Autenticação
             const handleAuth = async () => {
                 loading.value = true;
                 try {
-                    if (authMode.value === 'login') await signInWithEmailAndPassword(auth, authForm.email, authForm.password);
-                    else await createUserWithEmailAndPassword(auth, authForm.email, authForm.password);
-                } catch (e) { alert("Erro: " + e.message); }
+                    if (authMode.value === 'login') {
+                        await signInWithEmailAndPassword(auth, authForm.email, authForm.password);
+                        showToast("Bem-vindo de volta!", "success");
+                    } else {
+                        await createUserWithEmailAndPassword(auth, authForm.email, authForm.password);
+                        showToast("Conta criada com sucesso!", "success");
+                    }
+                } catch (e) { 
+                    showToast("Erro: " + (e.message.includes('auth/') ? 'Verifique suas credenciais' : e.message), "error"); 
+                }
                 loading.value = false;
             };
 
-            const logout = () => signOut(auth);
+            const logout = () => {
+                signOut(auth);
+                profileModalOpen.value = false;
+                showToast("Sessão encerrada.", "info");
+            };
 
             onMounted(() => {
                 onAuthStateChanged(auth, (u) => {
@@ -395,12 +1022,42 @@
                 });
             });
 
-            // Lógica Global
+            // Cores e Helpers de Formatação
             const getPersonColor = (name) => {
-                if (!personColors.value[name]) personColors.value[name] = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
+                if (!personColors.value[name]) {
+                    personColors.value[name] = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
+                }
                 return personColors.value[name];
             };
 
+            const formatMoney = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+
+            const formatDate = (dStr) => {
+                if (!dStr) return '';
+                const [y, m, d] = dStr.split('-');
+                return `${d}/${m}`;
+            };
+
+            const formatMonthLabel = (yyyyMM) => {
+                if (!yyyyMM) return '';
+                const [y, m] = yyyyMM.split('-').map(Number);
+                const date = new Date(y, m - 1, 1);
+                return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+            };
+
+            const getCardName = (id) => cards.value.find(c => c.id === id)?.name || 'Cartão';
+
+            // Navegação Rápida de Meses
+            const navigateMonth = (delta) => {
+                const [y, m] = reportMonth.value.split('-').map(Number);
+                let targetM = m + delta;
+                let targetY = y;
+                if (targetM > 12) { targetM = 1; targetY++; }
+                else if (targetM < 1) { targetM = 12; targetY--; }
+                reportMonth.value = `${targetY}-${String(targetM).padStart(2, '0')}`;
+            };
+
+            // Cálculo dos Ciclos e Projeção das Faturas
             const getInvoiceMonth = (pDate, cDay, dDay) => {
                 const [y, m, d] = pDate.split('-').map(Number);
                 let targetM = m; let targetY = y;
@@ -420,13 +1077,14 @@
             const projectedInvoices = computed(() => {
                 const invs = {};
                 
-                // Passo 1: Distribui os lançamentos nos meses
+                // Distribui os lançamentos nos meses
                 transactions.value.forEach(tx => {
                     const card = cards.value.find(c => c.id === tx.cardId);
                     if (!card) return;
                     const startMonth = getInvoiceMonth(tx.date, card.closingDay, card.dueDay);
                     const reps = tx.type === 'subscription' ? 24 : (tx.type === 'installment' ? tx.installments : 1);
                     const val = tx.type === 'installment' ? tx.amount / tx.installments : tx.amount;
+                    
                     for (let i = 0; i < reps; i++) {
                         const m = addMonths(startMonth, i);
                         if (!invs[m]) invs[m] = { total: 0, byPerson: {} };
@@ -434,14 +1092,16 @@
                         invs[m].total += val; 
                         invs[m].byPerson[tx.person].total += val;
                         invs[m].byPerson[tx.person].items.push({ 
-                            id: tx.id, desc: tx.description, amount: val, 
+                            id: tx.id, 
+                            desc: tx.description, 
+                            amount: val, 
                             parcelaInfo: tx.type === 'installment' ? `(${i+1}/${tx.installments})` : '',
                             isDebt: false
                         });
                     }
                 });
 
-                // Passo 2: Rolagem de Dívidas (Saldo Devedor)
+                // Rolagem de Dívidas (Saldo Devedor Acumulado)
                 const curMonthStr = new Date().toISOString().slice(0, 7);
                 const maxRolloverMonth = addMonths(curMonthStr, 2); 
                 
@@ -484,58 +1144,184 @@
 
             const currentInvoiceData = computed(() => projectedInvoices.value[reportMonth.value] || null);
 
-            // Ações Lançamentos
+            // Estatísticas do Mês Atual
+            const reportStats = computed(() => {
+                if (!currentInvoiceData.value) return { paidCount: 0, totalCount: 0, percentPaid: 0 };
+                const byPerson = currentInvoiceData.value.byPerson;
+                const peopleList = Object.keys(byPerson);
+                const paidCount = peopleList.filter(p => payments.value[reportMonth.value]?.[p]).length;
+                const totalCount = peopleList.length;
+                const percentPaid = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
+                return { paidCount, totalCount, percentPaid };
+            });
+
+            // Filtro de Transações com Busca
+            const filteredTransactions = computed(() => {
+                let list = [...transactions.value].reverse();
+                if (searchQuery.value.trim()) {
+                    const q = searchQuery.value.toLowerCase();
+                    list = list.filter(t => 
+                        (t.description || '').toLowerCase().includes(q) ||
+                        (t.person || '').toLowerCase().includes(q) ||
+                        getCardName(t.cardId).toLowerCase().includes(q)
+                    );
+                }
+                return list;
+            });
+
+            // Ações de Lançamentos
             const addTransaction = () => {
-                const finalAmt = (formTx.type === 'installment' && formTx.amountType === 'installment') ? formTx.amount * formTx.installments : formTx.amount;
+                const finalAmt = (formTx.type === 'installment' && formTx.amountType === 'installment') 
+                    ? formTx.amount * formTx.installments 
+                    : formTx.amount;
+
                 if (isEditingTx.value) {
                     const idx = transactions.value.findIndex(t => t.id === isEditingTx.value);
                     if (idx !== -1) transactions.value[idx] = { ...formTx, id: isEditingTx.value, amount: finalAmt };
                     cancelEditTx();
-                    alert("Lançamento atualizado!");
+                    showToast("Lançamento atualizado!", "success");
                 } else {
                     transactions.value.push({ ...formTx, id: Date.now().toString(), amount: finalAmt });
-                    formTx.description = ''; formTx.amount = null;
+                    formTx.description = ''; 
+                    formTx.amount = null;
+                    showToast("Lançamento adicionado com sucesso!", "success");
                 }
             };
 
-            const editTransaction = (tx) => { isEditingTx.value = tx.id; Object.assign(formTx, tx); currentTab.value = 'lancamentos'; window.scrollTo(0,0); };
-            const editTransactionById = (id) => { const tx = transactions.value.find(t => t.id === id); if(tx) editTransaction(tx); };
-            const cancelEditTx = () => { isEditingTx.value = null; formTx.description = ''; formTx.amount = null; };
-            const deleteTransaction = (id) => { if(confirm("Deseja realmente excluir?")) transactions.value = transactions.value.filter(t => t.id !== id); };
+            const editTransaction = (tx) => { 
+                isEditingTx.value = tx.id; 
+                Object.assign(formTx, tx); 
+                currentTab.value = 'lancamentos'; 
+                window.scrollTo({ top: 0, behavior: 'smooth' }); 
+            };
 
-            // Ações Cartões
+            const editTransactionById = (id) => { 
+                const tx = transactions.value.find(t => t.id === id); 
+                if (tx) editTransaction(tx); 
+            };
+
+            const cancelEditTx = () => { 
+                isEditingTx.value = null; 
+                formTx.description = ''; 
+                formTx.amount = null; 
+            };
+
+            const confirmDeleteTx = (id) => {
+                confirmDialog.title = "Excluir Lançamento";
+                confirmDialog.message = "Tem certeza que deseja remover esta despesa permanentemente?";
+                confirmDialog.onConfirm = () => {
+                    transactions.value = transactions.value.filter(t => t.id !== id);
+                    confirmDialog.show = false;
+                    showToast("Lançamento excluído.", "info");
+                };
+                confirmDialog.show = true;
+            };
+
+            // Ações de Cartões
             const addCard = () => {
                 if (isEditingCard.value) {
                     const idx = cards.value.findIndex(c => c.id === isEditingCard.value);
                     if (idx !== -1) cards.value[idx] = { ...formCard, id: isEditingCard.value };
                     cancelEditCard();
+                    showToast("Cartão atualizado!", "success");
                 } else {
                     cards.value.push({ ...formCard, id: Date.now().toString() });
                     formCard.name = '';
+                    showToast("Novo cartão cadastrado!", "success");
                 }
             };
-            const editCard = (card) => { isEditingCard.value = card.id; Object.assign(formCard, card); };
-            const cancelEditCard = () => { isEditingCard.value = null; formCard.name = ''; };
-            const deleteCard = (id) => { if(confirm("Excluir cartão e seus dados?")) cards.value = cards.value.filter(c => c.id !== id); };
 
-            // Ações Pessoas
-            const addPerson = () => { if (newPerson.value && !people.value.includes(newPerson.value)) { people.value.push(newPerson.value); newPerson.value = ''; } };
-            const editPerson = (oldName) => {
-                const n = prompt("Novo nome para " + oldName + ":", oldName);
-                if (n && n !== oldName) {
-                    if (people.value.includes(n)) { alert("Nome já existe."); return; }
-                    const idx = people.value.indexOf(oldName);
-                    people.value[idx] = n;
-                    personColors.value[n] = personColors.value[oldName];
-                    delete personColors.value[oldName];
-                    transactions.value.forEach(tx => { if(tx.person === oldName) tx.person = n; });
-                }
+            const editCard = (card) => { 
+                isEditingCard.value = card.id; 
+                Object.assign(formCard, card); 
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             };
-            const removePerson = (p) => { if(confirm("Remover " + p + "?")) people.value = people.value.filter(x => x !== p); };
-            const handlePersonChange = () => { if (formTx.person === 'NEW_PERSON') { const n = prompt("Nome:"); if(n) { people.value.push(n); formTx.person = n; } else formTx.person = 'Eu'; } };
-            
+
+            const cancelEditCard = () => { 
+                isEditingCard.value = null; 
+                formCard.name = ''; 
+            };
+
+            const confirmDeleteCard = (id) => {
+                confirmDialog.title = "Excluir Cartão";
+                confirmDialog.message = "A exclusão do cartão afetará os lançamentos vinculados a ele. Deseja prosseguir?";
+                confirmDialog.onConfirm = () => {
+                    cards.value = cards.value.filter(c => c.id !== id);
+                    confirmDialog.show = false;
+                    showToast("Cartão removido.", "info");
+                };
+                confirmDialog.show = true;
+            };
+
+            // Ações de Pessoas
+            const addPerson = () => { 
+                const trimmed = (newPerson.value || '').trim();
+                if (trimmed && !people.value.includes(trimmed)) { 
+                    people.value.push(trimmed); 
+                    newPerson.value = ''; 
+                    showToast(`${trimmed} adicionado(a)!`, "success");
+                } 
+            };
+
+            const openEditPersonModal = (oldName) => {
+                promptDialog.title = "Renomear Pessoa";
+                promptDialog.message = `Informe o novo nome para ${oldName}:`;
+                promptDialog.value = oldName;
+                promptDialog.onConfirm = () => {
+                    const n = (promptDialog.value || '').trim();
+                    if (n && n !== oldName) {
+                        if (people.value.includes(n)) { 
+                            showToast("Este nome já existe!", "error"); 
+                            return; 
+                        }
+                        const idx = people.value.indexOf(oldName);
+                        people.value[idx] = n;
+                        personColors.value[n] = personColors.value[oldName];
+                        delete personColors.value[oldName];
+                        transactions.value.forEach(tx => { if(tx.person === oldName) tx.person = n; });
+                        promptDialog.show = false;
+                        showToast("Nome atualizado com sucesso!", "success");
+                    } else {
+                        promptDialog.show = false;
+                    }
+                };
+                promptDialog.show = true;
+            };
+
+            const confirmRemovePerson = (p) => {
+                confirmDialog.title = "Remover Pessoa";
+                confirmDialog.message = `Deseja remover ${p} da lista de devedores?`;
+                confirmDialog.onConfirm = () => {
+                    people.value = people.value.filter(x => x !== p);
+                    confirmDialog.show = false;
+                    showToast(`${p} removido(a).`, "info");
+                };
+                confirmDialog.show = true;
+            };
+
+            const handlePersonSelectChange = () => { 
+                if (formTx.person === 'NEW_PERSON') { 
+                    promptDialog.title = "Nova Pessoa";
+                    promptDialog.message = "Digite o nome da pessoa a ser adicionada:";
+                    promptDialog.value = '';
+                    promptDialog.onConfirm = () => {
+                        const n = (promptDialog.value || '').trim();
+                        if (n) {
+                            if (!people.value.includes(n)) people.value.push(n);
+                            formTx.person = n;
+                        } else {
+                            formTx.person = 'Eu';
+                        }
+                        promptDialog.show = false;
+                    };
+                    promptDialog.show = true;
+                } 
+            };
+
             const clearPastDebts = (person) => {
-                if(confirm(`Deseja marcar todos os meses ANTERIORES ao mês atual como pagos para ${person}? Isso limpará os saldos devedores acumulados do passado.`)) {
+                confirmDialog.title = "Quitar Histórico de Dívidas";
+                confirmDialog.message = `Deseja marcar todos os meses ANTERIORES ao mês atual como pagos para ${person}? Isso limpará os saldos devedores passados.`;
+                confirmDialog.onConfirm = () => {
                     const curMonthStr = new Date().toISOString().slice(0, 7);
                     let count = 0;
                     for (const month in projectedInvoices.value) {
@@ -549,8 +1335,10 @@
                             }
                         }
                     }
-                    alert(`Histórico limpo! ${count} faturas passadas foram marcadas como pagas para ${person}.`);
-                }
+                    confirmDialog.show = false;
+                    showToast(`Histórico limpo! ${count} faturas passadas marcadas como pagas.`, "success");
+                };
+                confirmDialog.show = true;
             };
 
             const togglePayment = (m, p) => { 
@@ -559,29 +1347,66 @@
                 else payments.value[m][p] = true;
             };
 
-            const formatMoney = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
-            const getCardName = (id) => cards.value.find(c => c.id === id)?.name || 'Excluído';
+            const savePixKey = () => {
+                showToast("Chave PIX atualizada!", "success");
+            };
+
             const exportToWhatsApp = (name, total, items) => {
-                let msg = `*Fatura ${reportMonth.value}*\nOlá ${name}, sua parte é *${formatMoney(total)}*.\n\n*Detalhes:*\n`;
-                items.forEach(i => msg += `- ${i.desc} ${i.parcelaInfo}: ${formatMoney(i.amount)}\n`);
+                let msg = `💳 *Fatura: ${formatMonthLabel(reportMonth.value)}*\n`;
+                msg += `Olá *${name}*, segue o resumo da sua parte no cartão: *${formatMoney(total)}*\n\n`;
+                msg += `📋 *Detalhamento:*\n`;
+                items.forEach(i => {
+                    msg += `• ${i.desc} ${i.parcelaInfo ? `_(${i.parcelaInfo.replace(/[()]/g, '')})_` : ''}: ${formatMoney(i.amount)}\n`;
+                });
+                
+                if (userPixKey.value && userPixKey.value.trim()) {
+                    msg += `\n⚡ *Chave PIX para pagamento:*\n\`${userPixKey.value.trim()}\`\n`;
+                }
+                
+                msg += `\n_Mensagem gerada pelo Gestor de Faturas_ ✨`;
                 window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
             };
 
             const exportBackup = () => {
-                const data = { appName: 'GestorDeCartoes', cards: cards.value, people: people.value, transactions: transactions.value, payments: payments.value, personColors: personColors.value };
+                const data = { 
+                    appName: 'GestorDeCartoes', 
+                    cards: cards.value, 
+                    people: people.value, 
+                    transactions: transactions.value, 
+                    payments: payments.value, 
+                    personColors: personColors.value,
+                    pixKey: userPixKey.value,
+                    exportedAt: new Date().toISOString()
+                };
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `Backup_Gestor_${new Date().toISOString().slice(0,10)}.json`; a.click();
+                const a = document.createElement('a'); 
+                a.href = url; 
+                a.download = `Backup_Gestor_${new Date().toISOString().slice(0,10)}.json`; 
+                a.click();
+                showToast("Arquivo de backup baixado com sucesso!", "success");
             };
 
             const importBackup = (e) => {
                 const file = e.target.files[0];
+                if (!file) return;
                 const reader = new FileReader();
                 reader.onload = (ev) => {
-                    const data = JSON.parse(ev.target.result);
-                    if (data.transactions) {
-                        cards.value = data.cards || []; people.value = data.people || []; transactions.value = data.transactions || []; payments.value = data.payments || {}; personColors.value = data.personColors || {};
-                        alert("Importado com sucesso!");
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        if (data.transactions || data.cards) {
+                            cards.value = data.cards || []; 
+                            people.value = data.people || []; 
+                            transactions.value = data.transactions || []; 
+                            payments.value = data.payments || {}; 
+                            personColors.value = data.personColors || {};
+                            userPixKey.value = data.pixKey || '';
+                            showToast("Backup importado com sucesso!", "success");
+                        } else {
+                            showToast("Arquivo JSON inválido.", "error");
+                        }
+                    } catch (err) {
+                        showToast("Falha ao ler arquivo JSON.", "error");
                     }
                 };
                 reader.readAsText(file);
@@ -590,17 +1415,22 @@
             return {
                 user, loading, authMode, authForm, handleAuth, logout, syncStatus,
                 currentTab, reportMonth, cards, people, transactions, payments,
-                formCard, formTx, newPerson, isEditingTx, isEditingCard,
-                addTransaction, editTransaction, editTransactionById, cancelEditTx, deleteTransaction, 
-                addCard, editCard, cancelEditCard, deleteCard,
-                addPerson, editPerson, removePerson, handlePersonChange, clearPastDebts, togglePayment,
-                getPersonColor, currentInvoiceData, formatMoney, getCardName, exportToWhatsApp,
-                exportBackup, importBackup
+                formCard, formTx, newPerson, isEditingTx, isEditingCard, searchQuery,
+                filteredTransactions, reportStats, profileModalOpen, userPixKey,
+                toast, confirmDialog, promptDialog, showToast,
+                addTransaction, editTransaction, editTransactionById, cancelEditTx, confirmDeleteTx,
+                addCard, editCard, cancelEditCard, confirmDeleteCard,
+                addPerson, openEditPersonModal, confirmRemovePerson, handlePersonSelectChange, clearPastDebts,
+                togglePayment, getPersonColor, currentInvoiceData, formatMoney, formatDate, formatMonthLabel,
+                getCardName, navigateMonth, savePixKey, exportToWhatsApp, exportBackup, importBackup
             };
         }
     }).mount('#app');
+
+    // Registrar Service Worker para PWA
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
 </script>
 </body>
 </html>
-
-

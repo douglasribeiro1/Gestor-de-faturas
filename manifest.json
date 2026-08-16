@@ -1,10 +1,12 @@
 {
   "name": "Gestor de Faturas",
-  "short_name": "Faturas",
+  "short_name": "Gestor Faturas",
+  "description": "Gerenciador inteligente e compartilhado de faturas e cartões de crédito",
   "display": "standalone",
+  "orientation": "portrait",
   "start_url": "./index.html",
-  "background_color": "#f3f4f6",
-  "theme_color": "#3b82f6",
+  "background_color": "#0b1120",
+  "theme_color": "#2563eb",
   "icons": [
     {
       "src": "./icon.png",
