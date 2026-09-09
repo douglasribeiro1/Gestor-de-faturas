@@ -107,6 +107,24 @@
             position: relative;
             box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15);
         }
+
+        /* Animações do Gravador de Voz com IA */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.92); opacity: 0.8; }
+            50% { transform: scale(1.22); opacity: 0.25; }
+            100% { transform: scale(0.92); opacity: 0.8; }
+        }
+        .pulse-ring-anim {
+            animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes sound-bar-anim {
+            0%, 100% { height: 6px; }
+            50% { height: 28px; }
+        }
+        .sound-bar {
+            animation: sound-bar-anim 1s ease-in-out infinite;
+        }
     </style>
 </head>
 <body class="h-full antialiased text-slate-800 bg-slate-950 flex justify-center selection:bg-brand-500 selection:text-white">
@@ -216,6 +234,15 @@
 
             <!-- Botões de Ação Topo -->
             <div class="flex items-center gap-2">
+                <!-- Botão Rápido de Lançamento por Voz -->
+                <button @click="openVoiceModal" 
+                        class="p-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md shadow-purple-900/30 flex items-center justify-center transition active:scale-95" 
+                        title="Lançamento por Voz com IA (Groq Whisper V3)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                    </svg>
+                </button>
+
                 <!-- Símbolo Estático de Nuvem Conectada -->
                 <div class="p-1.5 rounded-xl bg-slate-800 border border-slate-700 text-emerald-400 flex items-center justify-center" 
                      title="Sincronizado na Nuvem">
@@ -254,6 +281,29 @@
                             </div>
                             <button v-if="isEditingTx" @click="cancelEditTx" class="text-xs text-rose-500 font-bold hover:underline">
                                 Cancelar
+                            </button>
+                        </div>
+
+                        <!-- Botão Chamativo de Lançamento por Voz com IA -->
+                        <div v-if="!isEditingTx" class="mb-3.5">
+                            <button type="button" @click="openVoiceModal"
+                                    class="w-full relative overflow-hidden group bg-gradient-to-r from-purple-600 via-indigo-600 to-brand-600 hover:from-purple-500 hover:to-brand-500 text-white p-3 rounded-2xl font-bold text-xs shadow-md shadow-indigo-500/20 flex items-center justify-between transition active:scale-[0.98]">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-sm shadow-inner group-hover:scale-110 transition">
+                                        🎙️
+                                    </div>
+                                    <div class="text-left">
+                                        <p class="font-extrabold text-xs leading-tight flex items-center gap-1.5">
+                                            <span>Falar com a IA</span>
+                                            <span class="text-[9px] bg-emerald-400/25 text-emerald-200 px-1.5 py-0.5 rounded font-semibold">Groq Whisper V3</span>
+                                        </p>
+                                        <p class="text-[10px] text-white/80 font-medium mt-0.5">Lançamento 100% automático por voz</p>
+                                    </div>
+                                </div>
+                                <span class="text-[11px] bg-white/20 hover:bg-white/30 px-2.5 py-1 rounded-xl font-extrabold tracking-wide uppercase flex items-center gap-1">
+                                    <span>Falar</span>
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                                </span>
                             </button>
                         </div>
 
@@ -696,6 +746,95 @@
                         </div>
                     </div>
 
+                    <!-- Configuração da Inteligência Artificial (Groq Cloud) -->
+                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80 space-y-3.5">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span class="p-1.5 rounded-lg bg-purple-50 text-purple-600 font-bold">🎙️</span>
+                                Inteligência Artificial (Groq Cloud)
+                            </h2>
+                            <span class="text-[10px] font-extrabold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                                Whisper V3 + LLM
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 leading-relaxed">
+                            Permite lançar despesas por comando de voz. A fala é transcrita com <strong>Whisper V3 Large</strong> e interpretada com <strong>{{ groqModel }}</strong>.
+                        </p>
+
+                        <!-- Chave API Groq -->
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase">Chave de API do Groq</label>
+                                <a href="https://console.groq.com/keys" target="_blank" class="text-[10px] text-brand-600 font-bold hover:underline flex items-center gap-1">
+                                    <span>Obter chave grátis</span>
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                </a>
+                            </div>
+                            <div class="relative">
+                                <input v-model="groqApiKey" :type="showGroqKey ? 'text' : 'password'" placeholder="gsk_..."
+                                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono font-medium outline-none focus:border-brand-500 pr-10">
+                                <button type="button" @click="showGroqKey = !showGroqKey" 
+                                        class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs">
+                                    {{ showGroqKey ? '👁️' : '🔒' }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Modelo de Análise -->
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-bold text-slate-600 uppercase">Modelo de Análise Textual</label>
+                            <input v-model="groqModel" placeholder="openai/gpt-oss-120b"
+                                   class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-mono font-medium outline-none focus:border-brand-500">
+                            <!-- Atalhos rápidos de modelos -->
+                            <div class="flex flex-wrap gap-1.5 pt-1">
+                                <button type="button" @click="groqModel = 'openai/gpt-oss-120b'"
+                                        :class="groqModel === 'openai/gpt-oss-120b' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                                        class="px-2 py-0.5 rounded-lg text-[10px] font-bold transition">
+                                    openai/gpt-oss-120b
+                                </button>
+                                <button type="button" @click="groqModel = 'gpt-oss-120b'"
+                                        :class="groqModel === 'gpt-oss-120b' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                                        class="px-2 py-0.5 rounded-lg text-[10px] font-bold transition">
+                                    gpt-oss-120b
+                                </button>
+                                <button type="button" @click="groqModel = 'qwen-2.5-32b'"
+                                        :class="groqModel === 'qwen-2.5-32b' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                                        class="px-2 py-0.5 rounded-lg text-[10px] font-bold transition">
+                                    qwen-2.5-32b
+                                </button>
+                                <button type="button" @click="groqModel = 'llama-3.3-70b-versatile'"
+                                        :class="groqModel === 'llama-3.3-70b-versatile' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                                        class="px-2 py-0.5 rounded-lg text-[10px] font-bold transition">
+                                    llama-3.3-70b
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Opção Lançamento Automático -->
+                        <div class="pt-1">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input v-model="groqAutoConfirm" type="checkbox" class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
+                                <span class="text-xs font-semibold text-slate-700">Lançar automaticamente após falar (contagem de 3s)</span>
+                            </label>
+                        </div>
+
+                        <!-- Botões de Ação Groq -->
+                        <div class="flex gap-2 pt-1">
+                            <button type="button" @click="saveGroqSettings" 
+                                    class="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-sm">
+                                Salvar Configurações de IA
+                            </button>
+                            <button type="button" @click="testGroqConnection" :disabled="groqTesting"
+                                    class="px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                                <svg v-if="groqTesting" class="animate-spin h-3.5 w-3.5 text-slate-600" viewBox="0 0 24 24" fill="none">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                                </svg>
+                                <span>{{ groqTesting ? 'Testando...' : 'Testar' }}</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Configuração da Chave PIX (Funcionalidade Nova) -->
                     <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80 space-y-3">
                         <div class="flex items-center justify-between">
@@ -862,6 +1001,207 @@
             </div>
         </div>
 
+        <!-- ========================================== -->
+        <!-- MODAL DE LANÇAMENTO POR VOZ COM IA (GROQ) -->
+        <!-- ========================================== -->
+        <div v-if="voiceModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+            <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl border border-slate-200 space-y-4 animate-scaleUp overflow-hidden relative">
+                
+                <!-- Header do Modal -->
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="p-1.5 rounded-xl bg-purple-100 text-purple-600 text-sm font-bold">🎙️</span>
+                        <div>
+                            <h3 class="text-sm font-extrabold text-slate-800 leading-tight">Lançar por Voz com IA</h3>
+                            <p class="text-[10px] text-slate-400 font-medium">Whisper V3 Large + {{ groqModel }}</p>
+                        </div>
+                    </div>
+                    <button @click="closeVoiceModal" class="text-slate-400 hover:text-slate-600 text-lg font-bold p-1">✕</button>
+                </div>
+
+                <!-- ESTADO 1: PRECISA DA CHAVE API (need_key) -->
+                <div v-if="voiceState === 'need_key'" class="space-y-3.5 py-1">
+                    <div class="p-3 bg-purple-50/80 border border-purple-100 rounded-2xl text-center space-y-1">
+                        <span class="text-2xl block">🔑</span>
+                        <p class="text-xs font-bold text-purple-950">Chave da Groq Cloud Necessária</p>
+                        <p class="text-[11px] text-purple-700 leading-tight">
+                            Para usar o Whisper V3 Large e a IA para lançamentos automáticos, informe sua chave gratuita da Groq.
+                        </p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center text-[10px]">
+                            <label class="font-bold text-slate-600 uppercase">Chave de API</label>
+                            <a href="https://console.groq.com/keys" target="_blank" class="text-brand-600 font-bold hover:underline">
+                                Obter no console.groq.com ↗
+                            </a>
+                        </div>
+                        <input v-model="groqApiKey" type="password" placeholder="gsk_..."
+                               class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono font-semibold outline-none focus:border-purple-500">
+                    </div>
+
+                    <button @click="saveGroqSettings" :disabled="!groqApiKey.trim()"
+                            class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-bold transition disabled:opacity-40">
+                        Salvar e Continuar
+                    </button>
+                </div>
+
+                <!-- ESTADO 2: PRONTO PARA FALAR (ready) -->
+                <div v-else-if="voiceState === 'ready'" class="space-y-4 py-2 text-center">
+                    <div class="relative w-28 h-28 mx-auto flex items-center justify-center">
+                        <button @click="startVoiceRecording" 
+                                class="w-20 h-20 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-xl shadow-purple-600/30 flex items-center justify-center text-3xl active:scale-95 transition">
+                            🎙️
+                        </button>
+                    </div>
+
+                    <div class="space-y-1">
+                        <p class="text-sm font-black text-slate-800">Toque no microfone para falar</p>
+                        <p class="text-[11px] text-slate-500 max-w-xs mx-auto">
+                            Diga o que comprou, valor, parcelas, pessoa e cartão.
+                        </p>
+                    </div>
+
+                    <!-- Dicas de Frases -->
+                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200/70 text-left space-y-1.5">
+                        <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Exemplos de comando:</p>
+                        <p class="text-[11px] text-slate-700 italic leading-snug">"Comprei um almoço de 45 reais e 50 centavos para o Carlos no Nubank hoje"</p>
+                        <p class="text-[11px] text-slate-700 italic leading-snug">"Geladeira de 2400 reais em 10 vezes no Inter para Eu"</p>
+                    </div>
+                </div>
+
+                <!-- ESTADO 3: GRAVANDO (recording) -->
+                <div v-else-if="voiceState === 'recording'" class="space-y-5 py-3 text-center">
+                    <!-- Microfone pulsando e timer -->
+                    <div class="relative w-32 h-32 mx-auto flex items-center justify-center">
+                        <div class="absolute inset-0 rounded-full bg-rose-500/20 pulse-ring-anim"></div>
+                        <div class="absolute w-24 h-24 rounded-full bg-rose-500/30 animate-pulse"></div>
+                        <div class="relative w-20 h-20 rounded-full bg-gradient-to-tr from-rose-600 to-red-500 text-white shadow-xl shadow-rose-600/40 flex items-center justify-center text-2xl">
+                            🎙️
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-xs font-bold border border-rose-200/60">
+                            <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                            <span>Ouvindo... {{ formatDuration(voiceRecordingDuration) }}</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">Fale com clareza os detalhes da compra</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button @click="cancelVoiceRecording" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+                            Cancelar
+                        </button>
+                        <button @click="stopVoiceRecording" class="py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-rose-500/20">
+                            <span>Concluir</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ESTADO 4: PROCESSANDO (processing) -->
+                <div v-else-if="voiceState === 'processing'" class="space-y-4 py-6 text-center">
+                    <div class="relative w-20 h-20 mx-auto flex items-center justify-center">
+                        <svg class="animate-spin h-14 w-14 text-purple-600" viewBox="0 0 24 24" fill="none">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
+                        <span class="absolute text-xl">⚡</span>
+                    </div>
+
+                    <div class="space-y-1">
+                        <p class="text-xs font-bold text-purple-900">{{ voiceProcessingStep }}</p>
+                        <p class="text-[11px] text-slate-400">Processamento ultrarrápido na Groq Cloud</p>
+                    </div>
+                </div>
+
+                <!-- ESTADO 5: REVISÃO / AUTO-CONFIRMAÇÃO (review) -->
+                <div v-else-if="voiceState === 'review' && voiceParsedData" class="space-y-3.5 py-1">
+                    <!-- Transcrição Capturada -->
+                    <div class="p-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-left">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Você disse:</p>
+                        <p class="text-xs text-slate-700 italic mt-0.5">"{{ voiceTranscription }}"</p>
+                    </div>
+
+                    <!-- Card com Dados Estruturados -->
+                    <div class="p-3.5 bg-gradient-to-br from-purple-50/50 to-brand-50/50 border border-purple-200/70 rounded-2xl space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-bold text-purple-900 uppercase">Compra Identificada</span>
+                            <span class="text-sm font-black text-slate-900">{{ formatMoney(voiceParsedData.amount) }}</span>
+                        </div>
+
+                        <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <span>🛍️</span>
+                            <span>{{ voiceParsedData.description }}</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-purple-100">
+                            <div>
+                                <span class="text-slate-400 block text-[9px] font-bold uppercase">Pessoa</span>
+                                <span class="font-extrabold text-brand-600">{{ voiceParsedData.person }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block text-[9px] font-bold uppercase">Cartão</span>
+                                <span class="font-bold text-slate-700">{{ getCardName(voiceParsedData.cardId) }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block text-[9px] font-bold uppercase">Condição</span>
+                                <span class="font-bold text-purple-700">
+                                    {{ voiceParsedData.type === 'installment' ? `${voiceParsedData.installments}x de ${formatMoney(voiceParsedData.amount / voiceParsedData.installments)}` : (voiceParsedData.type === 'subscription' ? 'Mensal' : 'À Vista') }}
+                                </span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block text-[9px] font-bold uppercase">Data</span>
+                                <span class="font-bold text-slate-700">{{ formatDate(voiceParsedData.date) }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Indicador de Auto-Confirm ou Ações -->
+                    <div v-if="groqAutoConfirm && voiceAutoConfirmTimer > 0" class="space-y-1.5">
+                        <div class="flex items-center justify-between text-[11px] font-bold text-purple-900">
+                            <span>Lançando automaticamente em {{ voiceAutoConfirmTimer }}s...</span>
+                            <button @click="cancelAutoConfirm" class="text-rose-600 hover:underline">Pausar</button>
+                        </div>
+                        <div class="w-full bg-purple-100 h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-purple-600 h-full transition-all duration-1000" :style="{ width: (voiceAutoConfirmTimer / 3 * 100) + '%' }"></div>
+                        </div>
+                    </div>
+
+                    <!-- Botões de Ação -->
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button @click="editInFormFromVoice" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+                            Revisar no Form
+                        </button>
+                        <button @click="applyVoiceTransaction" class="py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-md shadow-emerald-600/20">
+                            <span>Confirmar Agora</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ESTADO 6: ERRO (error) -->
+                <div v-else-if="voiceState === 'error'" class="space-y-4 py-2 text-center">
+                    <div class="p-3 bg-rose-50 border border-rose-200 rounded-2xl space-y-1">
+                        <span class="text-2xl block">⚠️</span>
+                        <p class="text-xs font-bold text-rose-900">Não foi possível concluir</p>
+                        <p class="text-[11px] text-rose-700 leading-snug">{{ voiceErrorMessage }}</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <button @click="voiceState = 'need_key'" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+                            Verificar Chave
+                        </button>
+                        <button @click="voiceState = 'ready'" class="py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition">
+                            Tentar de Novo
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
     </template>
 </div>
 
@@ -903,6 +1243,22 @@
             const searchQuery = ref('');
             const profileModalOpen = ref(false);
             const userPixKey = ref('');
+
+            // IA & Lançamento por Voz (Groq Cloud)
+            const groqApiKey = ref(localStorage.getItem('groq_api_key') || '');
+            const groqModel = ref(localStorage.getItem('groq_model') || 'openai/gpt-oss-120b');
+            const groqAutoConfirm = ref(localStorage.getItem('groq_auto_confirm') !== 'false');
+            const showGroqKey = ref(false);
+            const groqTesting = ref(false);
+
+            const voiceModalOpen = ref(false);
+            const voiceState = ref('ready'); // 'ready' | 'need_key' | 'recording' | 'processing' | 'review' | 'error'
+            const voiceProcessingStep = ref('');
+            const voiceRecordingDuration = ref(0);
+            const voiceTranscription = ref('');
+            const voiceParsedData = ref(null);
+            const voiceAutoConfirmTimer = ref(3);
+            const voiceErrorMessage = ref('');
 
             // Estrutura de dados principal
             const cards = ref([]);
@@ -956,6 +1312,9 @@
                         payments.value = data.payments || {};
                         personColors.value = data.personColors || {'Eu': '#2563eb'};
                         userPixKey.value = data.pixKey || '';
+                        if (data.groqApiKey && !groqApiKey.value) groqApiKey.value = data.groqApiKey;
+                        if (data.groqModel) groqModel.value = data.groqModel;
+                        if (data.groqAutoConfirm !== undefined) groqAutoConfirm.value = data.groqAutoConfirm;
                         if (!formTx.cardId && cards.value.length > 0) formTx.cardId = cards.value[0].id;
                     }
                 });
@@ -973,6 +1332,9 @@
                         payments: payments.value, 
                         personColors: personColors.value, 
                         pixKey: userPixKey.value,
+                        groqApiKey: groqApiKey.value,
+                        groqModel: groqModel.value,
+                        groqAutoConfirm: groqAutoConfirm.value,
                         updatedAt: new Date().toISOString()
                     });
                 } catch (e) { 
@@ -982,7 +1344,7 @@
             };
 
             let timer;
-            watch([cards, people, transactions, payments, personColors, userPixKey], () => {
+            watch([cards, people, transactions, payments, personColors, userPixKey, groqApiKey, groqModel, groqAutoConfirm], () => {
                 clearTimeout(timer);
                 timer = setTimeout(pushToCloud, 1800);
             }, { deep: true });
@@ -1408,6 +1770,407 @@
                 reader.readAsText(file);
             };
 
+            // ==========================================
+            // RECURSOS DE IA & VOZ (GROQ CLOUD)
+            // ==========================================
+            let voiceMediaRecorder = null;
+            let voiceAudioChunks = [];
+            let voiceRecordingInterval = null;
+            let voiceAutoConfirmInterval = null;
+
+            const formatDuration = (sec) => {
+                const m = Math.floor(sec / 60);
+                const s = sec % 60;
+                return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            };
+
+            const cancelAutoConfirm = () => {
+                if (voiceAutoConfirmInterval) {
+                    clearInterval(voiceAutoConfirmInterval);
+                    voiceAutoConfirmInterval = null;
+                }
+                voiceAutoConfirmTimer.value = 0;
+            };
+
+            const saveGroqSettings = () => {
+                localStorage.setItem('groq_api_key', (groqApiKey.value || '').trim());
+                localStorage.setItem('groq_model', (groqModel.value || '').trim() || 'openai/gpt-oss-120b');
+                localStorage.setItem('groq_auto_confirm', groqAutoConfirm.value ? 'true' : 'false');
+                pushToCloud();
+                showToast("Configurações de IA salvas com sucesso!", "success");
+                if (voiceState.value === 'need_key') {
+                    voiceState.value = 'ready';
+                }
+            };
+
+            const testGroqConnection = async () => {
+                if (!groqApiKey.value || !groqApiKey.value.trim()) {
+                    showToast("Por favor, insira sua chave Groq primeiro.", "error");
+                    return;
+                }
+                groqTesting.value = true;
+                try {
+                    const res = await fetch('https://api.groq.com/openai/v1/models', {
+                        headers: { 'Authorization': `Bearer ${groqApiKey.value.trim()}` }
+                    });
+                    if (res.ok) {
+                        showToast("Conexão com a Groq Cloud realizada com sucesso!", "success");
+                    } else {
+                        const err = await res.json().catch(() => ({}));
+                        showToast(`Erro na Groq: ${err?.error?.message || res.statusText}`, "error");
+                    }
+                } catch (e) {
+                    showToast(`Falha ao conectar: ${e.message}`, "error");
+                } finally {
+                    groqTesting.value = false;
+                }
+            };
+
+            const openVoiceModal = () => {
+                cancelAutoConfirm();
+                voiceErrorMessage.value = '';
+                voiceTranscription.value = '';
+                voiceParsedData.value = null;
+                voiceRecordingDuration.value = 0;
+                if (!groqApiKey.value || !groqApiKey.value.trim()) {
+                    voiceState.value = 'need_key';
+                } else {
+                    voiceState.value = 'ready';
+                }
+                voiceModalOpen.value = true;
+            };
+
+            const closeVoiceModal = () => {
+                cancelAutoConfirm();
+                if (voiceMediaRecorder && voiceMediaRecorder.state === 'recording') {
+                    try { voiceMediaRecorder.stop(); } catch(e){}
+                }
+                if (voiceRecordingInterval) {
+                    clearInterval(voiceRecordingInterval);
+                    voiceRecordingInterval = null;
+                }
+                voiceModalOpen.value = false;
+                voiceState.value = 'ready';
+            };
+
+            const startVoiceRecording = async () => {
+                if (!groqApiKey.value || !groqApiKey.value.trim()) {
+                    voiceState.value = 'need_key';
+                    return;
+                }
+
+                voiceErrorMessage.value = '';
+                voiceTranscription.value = '';
+                voiceParsedData.value = null;
+                voiceRecordingDuration.value = 0;
+                cancelAutoConfirm();
+
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    
+                    let mimeType = 'audio/webm;codecs=opus';
+                    if (!window.MediaRecorder || !MediaRecorder.isTypeSupported(mimeType)) {
+                        if (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+                        else if (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+                        else mimeType = '';
+                    }
+
+                    voiceAudioChunks = [];
+                    voiceMediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+
+                    voiceMediaRecorder.ondataavailable = (event) => {
+                        if (event.data && event.data.size > 0) {
+                            voiceAudioChunks.push(event.data);
+                        }
+                    };
+
+                    voiceMediaRecorder.onstop = async () => {
+                        clearInterval(voiceRecordingInterval);
+                        voiceRecordingInterval = null;
+                        stream.getTracks().forEach(track => track.stop());
+
+                        if (voiceAudioChunks.length === 0) {
+                            voiceState.value = 'error';
+                            voiceErrorMessage.value = 'Nenhum áudio foi capturado. Fale novamente.';
+                            return;
+                        }
+
+                        const audioBlob = new Blob(voiceAudioChunks, { type: voiceMediaRecorder.mimeType || 'audio/webm' });
+                        await processVoicePipeline(audioBlob);
+                    };
+
+                    voiceMediaRecorder.start();
+                    voiceState.value = 'recording';
+
+                    voiceRecordingInterval = setInterval(() => {
+                        voiceRecordingDuration.value++;
+                    }, 1000);
+
+                } catch (err) {
+                    console.error("Erro ao iniciar gravação de voz:", err);
+                    voiceState.value = 'error';
+                    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                        voiceErrorMessage.value = 'Permissão de microfone negada. Autorize o microfone no navegador para gravar.';
+                    } else {
+                        voiceErrorMessage.value = `Erro ao acessar microfone: ${err.message}`;
+                    }
+                }
+            };
+
+            const stopVoiceRecording = () => {
+                if (voiceMediaRecorder && voiceMediaRecorder.state === 'recording') {
+                    voiceMediaRecorder.stop();
+                }
+            };
+
+            const cancelVoiceRecording = () => {
+                if (voiceMediaRecorder && voiceMediaRecorder.state === 'recording') {
+                    voiceMediaRecorder.onstop = null;
+                    try { voiceMediaRecorder.stop(); } catch(e){}
+                }
+                if (voiceRecordingInterval) {
+                    clearInterval(voiceRecordingInterval);
+                    voiceRecordingInterval = null;
+                }
+                voiceState.value = 'ready';
+            };
+
+            const processVoicePipeline = async (audioBlob) => {
+                voiceState.value = 'processing';
+                try {
+                    // ETAPA 1: Transcrição com Whisper V3 Large na Groq Cloud
+                    voiceProcessingStep.value = 'Transcrevendo com Whisper V3 Large...';
+                    const text = await transcribeAudioWithWhisper(audioBlob);
+                    if (!text || !text.trim()) {
+                        throw new Error('Não foi possível identificar nenhuma fala no áudio. Fale mais perto do microfone.');
+                    }
+                    voiceTranscription.value = text.trim();
+
+                    // ETAPA 2: Extração Estruturada com Modelo de IA na Groq Cloud
+                    const modelName = groqModel.value || 'openai/gpt-oss-120b';
+                    voiceProcessingStep.value = `Estruturando dados com ${modelName}...`;
+                    const parsedData = await parseExpenseWithGroq(text.trim());
+                    voiceParsedData.value = parsedData;
+
+                    // ETAPA 3: Conclusão e Preparo para Confirmação / Auto-salvamento
+                    voiceState.value = 'review';
+
+                    if (groqAutoConfirm.value) {
+                        voiceAutoConfirmTimer.value = 3;
+                        voiceAutoConfirmInterval = setInterval(() => {
+                            voiceAutoConfirmTimer.value--;
+                            if (voiceAutoConfirmTimer.value <= 0) {
+                                cancelAutoConfirm();
+                                applyVoiceTransaction();
+                            }
+                        }, 1000);
+                    }
+
+                } catch (err) {
+                    console.error("Falha no pipeline de IA da Groq:", err);
+                    voiceState.value = 'error';
+                    voiceErrorMessage.value = err.message || 'Falha ao processar comando de voz.';
+                }
+            };
+
+            const transcribeAudioWithWhisper = async (audioBlob) => {
+                const mimeType = voiceMediaRecorder?.mimeType || 'audio/webm';
+                let ext = 'webm';
+                if (mimeType.includes('mp4')) ext = 'mp4';
+                else if (mimeType.includes('ogg')) ext = 'ogg';
+                else if (mimeType.includes('wav')) ext = 'wav';
+
+                const audioFile = new File([audioBlob], `audio.${ext}`, { type: mimeType });
+                const formData = new FormData();
+                formData.append('file', audioFile);
+                formData.append('model', 'whisper-large-v3');
+                formData.append('language', 'pt');
+                formData.append('response_format', 'json');
+                formData.append('prompt', 'Lançamento de compras no cartão de crédito, faturas, valores em reais, parcelas e nomes de pessoas');
+
+                const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${groqApiKey.value.trim()}`
+                    },
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err?.error?.message || `Erro no Whisper V3 (${res.status})`);
+                }
+
+                const json = await res.json();
+                return json.text;
+            };
+
+            const parseExpenseWithGroq = async (transcriptionText) => {
+                const cardsList = cards.value.map(c => ({ id: c.id, name: c.name }));
+                const peopleList = people.value;
+                const today = new Date().toISOString().slice(0, 10);
+
+                const systemPrompt = `Você é um assistente financeiro inteligente do app 'Gestor de Faturas'.
+Sua tarefa é analisar a fala do usuário sobre uma despesa ou compra e extrair os dados estruturados com extrema exatidão.
+
+DATA DE REFERÊNCIA (HOJE): ${today}
+CARTÕES CADASTRADOS: ${JSON.stringify(cardsList)}
+PESSOAS CADASTRADAS: ${JSON.stringify(peopleList)}
+
+REGRAS:
+1. "description": Título claro e conciso da despesa ou estabelecimento (ex: "Supermercado", "Almoço", "Tênis Nike", "Gasolina", "Academia").
+2. "amount": Valor monetário em número float positivo (ex: 150.00).
+3. "amountType": "total" (se o valor for o total da compra) ou "installment" (se for o valor falado de cada parcela). Padrão: "total".
+4. "type": "single" (à vista), "installment" (parcelado), ou "subscription" (mensal, assinatura, recorrente).
+5. "installments": Número inteiro de parcelas (mínimo 2 se for parcelado; 1 se for à vista ou assinatura).
+6. "person": Nome da pessoa dona do gasto. Se o usuário disser "eu", "para mim", "minha", use "Eu". Se disser o nome de alguém, procure entre as pessoas cadastradas ou use o nome falado com inicial maiúscula.
+7. "cardId": Se o usuário citou algum cartão, procure o cartão correspondente e retorne o seu "id". Se não mencionou nenhum cartão ou não encontrou, retorne o id do primeiro cartão: "${cardsList[0]?.id || ''}".
+8. "date": Data da compra no formato YYYY-MM-DD. "hoje" = ${today}, "ontem" = dia anterior. Se não informado, use ${today}.
+9. "summary": Frase curta de resumo (ex: "Supermercado de R$ 150,00 em 3x para Eu").
+
+Responda ESTRITAMENTE em formato JSON compatível com a estrutura acima.`;
+
+                const requestedModel = (groqModel.value || 'openai/gpt-oss-120b').trim();
+                const modelsToTry = [requestedModel];
+                if (requestedModel === 'openai/gpt-oss-120b') modelsToTry.push('gpt-oss-120b');
+                else if (requestedModel === 'gpt-oss-120b') modelsToTry.push('openai/gpt-oss-120b');
+                if (!modelsToTry.includes('qwen-2.5-32b')) modelsToTry.push('qwen-2.5-32b');
+                if (!modelsToTry.includes('llama-3.3-70b-versatile')) modelsToTry.push('llama-3.3-70b-versatile');
+
+                let lastError = null;
+                for (const mod of modelsToTry) {
+                    try {
+                        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${groqApiKey.value.trim()}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                model: mod,
+                                messages: [
+                                    { role: 'system', content: systemPrompt },
+                                    { role: 'user', content: transcriptionText }
+                                ],
+                                response_format: { type: 'json_object' },
+                                temperature: 0.1
+                            })
+                        });
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            const content = data.choices?.[0]?.message?.content;
+                            const parsed = JSON.parse(content);
+
+                            if (!parsed.description) parsed.description = 'Compra por voz';
+                            parsed.amount = Number(parsed.amount) || 0;
+                            if (!parsed.type) parsed.type = 'single';
+                            if (!parsed.installments || isNaN(Number(parsed.installments))) {
+                                parsed.installments = parsed.type === 'installment' ? 2 : 1;
+                            } else {
+                                parsed.installments = Number(parsed.installments);
+                            }
+                            if (!parsed.person) parsed.person = 'Eu';
+                            if (!parsed.cardId && cards.value.length > 0) parsed.cardId = cards.value[0].id;
+                            if (!parsed.date) parsed.date = today;
+                            return parsed;
+                        } else {
+                            const errData = await res.json().catch(() => ({}));
+                            lastError = new Error(errData?.error?.message || `Erro no modelo ${mod} (${res.status})`);
+                            if (res.status === 401 || res.status === 403) throw lastError;
+                        }
+                    } catch (e) {
+                        lastError = e;
+                        if (e.message && (e.message.includes('401') || e.message.includes('invalid_api_key'))) {
+                            throw e;
+                        }
+                    }
+                }
+                throw lastError || new Error("Não foi possível interpretar os dados da compra.");
+            };
+
+            const applyVoiceTransaction = () => {
+                cancelAutoConfirm();
+                if (!voiceParsedData.value) return;
+
+                const data = voiceParsedData.value;
+                let personName = (data.person || 'Eu').trim();
+                if (personName.toLowerCase() === 'eu') {
+                    personName = 'Eu';
+                } else {
+                    personName = personName.charAt(0).toUpperCase() + personName.slice(1);
+                }
+
+                // Se a pessoa for nova, adiciona automaticamente à lista
+                if (!people.value.includes(personName)) {
+                    people.value.push(personName);
+                    getPersonColor(personName);
+                }
+
+                // Garante cartão válido
+                let targetCardId = data.cardId;
+                if (!cards.value.some(c => c.id === targetCardId)) {
+                    targetCardId = cards.value[0]?.id || '';
+                }
+
+                const installments = (data.type === 'installment' && Number(data.installments) > 1) 
+                    ? Number(data.installments) 
+                    : 1;
+                const parsedAmt = Number(data.amount) || 0;
+                const finalAmt = (data.type === 'installment' && data.amountType === 'installment') 
+                    ? parsedAmt * installments 
+                    : parsedAmt;
+
+                const newTx = {
+                    id: Date.now().toString(),
+                    description: data.description || 'Compra por voz',
+                    amount: finalAmt,
+                    amountType: data.amountType || 'total',
+                    date: data.date || new Date().toISOString().slice(0, 10),
+                    cardId: targetCardId,
+                    person: personName,
+                    type: data.type || (installments > 1 ? 'installment' : 'single'),
+                    installments: installments
+                };
+
+                transactions.value.push(newTx);
+                pushToCloud();
+                showToast(`Lançamento realizado: ${newTx.description} (${formatMoney(newTx.amount)})`, "success");
+                closeVoiceModal();
+            };
+
+            const editInFormFromVoice = () => {
+                cancelAutoConfirm();
+                if (!voiceParsedData.value) return;
+
+                const data = voiceParsedData.value;
+                let personName = (data.person || 'Eu').trim();
+                if (personName.toLowerCase() === 'eu') {
+                    personName = 'Eu';
+                } else {
+                    personName = personName.charAt(0).toUpperCase() + personName.slice(1);
+                }
+
+                if (!people.value.includes(personName)) {
+                    people.value.push(personName);
+                    getPersonColor(personName);
+                }
+
+                formTx.description = data.description || '';
+                formTx.amount = data.amount || null;
+                formTx.amountType = data.amountType || 'total';
+                formTx.type = data.type || 'single';
+                formTx.installments = data.installments || 2;
+                formTx.person = personName;
+                formTx.cardId = data.cardId || (cards.value[0]?.id || '');
+                formTx.date = data.date || new Date().toISOString().slice(0, 10);
+
+                closeVoiceModal();
+                currentTab.value = 'lancamentos';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                showToast("Dados transferidos para o formulário. Revise e salve!", "info");
+            };
+
             return {
                 user, loading, authMode, authForm, handleAuth, logout, syncStatus,
                 currentTab, reportMonth, cards, people, transactions, payments,
@@ -1418,7 +2181,13 @@
                 addCard, editCard, cancelEditCard, confirmDeleteCard,
                 addPerson, openEditPersonModal, confirmRemovePerson, handlePersonSelectChange, clearPastDebts,
                 togglePayment, getPersonColor, currentInvoiceData, formatMoney, formatDate, formatMonthLabel,
-                getCardName, navigateMonth, savePixKey, exportToWhatsApp, exportBackup, importBackup
+                getCardName, navigateMonth, savePixKey, exportToWhatsApp, exportBackup, importBackup,
+                groqApiKey, groqModel, groqAutoConfirm, showGroqKey, groqTesting,
+                saveGroqSettings, testGroqConnection,
+                voiceModalOpen, voiceState, voiceProcessingStep, voiceRecordingDuration,
+                voiceTranscription, voiceParsedData, voiceAutoConfirmTimer, voiceErrorMessage,
+                openVoiceModal, closeVoiceModal, startVoiceRecording, stopVoiceRecording,
+                cancelVoiceRecording, cancelAutoConfirm, applyVoiceTransaction, editInFormFromVoice, formatDuration
             };
         }
     }).mount('#app');
