@@ -1,2201 +1,695 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="h-full">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Gestor de Faturas - Controle Financeiro Inteligente</title>
-    <meta name="description" content="Gerenciador inteligente e compartilhado de faturas e cartões de crédito.">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Gestor de Faturas</title>
+    <meta name="description" content="Gerenciador compartilhado de faturas e cartões de crédito.">
+    <meta name="theme-color" content="#f4f5fa">
+    <meta name="color-scheme" content="light dark">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="icon" href="./icon.png" type="image/png">
-    <link rel="apple-touch-icon" href="./icon.png">
-    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-title" content="Faturas">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+    <link rel="icon" href="./icons/icon-192.png" type="image/png" sizes="192x192">
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+    <link rel="manifest" href="./manifest.json">
 
-    <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css">
 
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            200: '#bfdbfe',
-                            300: '#93c5fd',
-                            400: '#60a5fa',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                            800: '#1e40af',
-                            900: '#1e3a8a',
-                        },
-                        slate: {
-                            850: '#151f32',
-                            900: '#0f172a',
-                            950: '#090d16',
-                        }
-                    }
-                }
-            }
-        }
+        // Aplica o tema antes da primeira pintura (evita "piscar" claro/escuro).
+        try {
+            var t = localStorage.getItem('theme') || 'auto';
+            var dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        } catch (e) {}
     </script>
-
-    <!-- Vue 3 Prod -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-
-    <style>
-        * {
-            -webkit-tap-highlight-color: transparent;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #0b1120;
-            color: #1e293b;
-        }
-        
-        /* Suporte a tela cheia e barra de navegação virtual em smartphones */
-        .tab-content { 
-            padding-bottom: calc(90px + env(safe-area-inset-bottom)) !important; 
-        }
-        .safe-bottom {
-            padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
-        }
-        .safe-top {
-            padding-top: calc(0.5rem + env(safe-area-inset-top));
-        }
-
-        /* Animações e Transições */
-        .fade-enter-active, .fade-leave-active { transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
-        .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(4px); }
-
-        .modal-enter-active, .modal-leave-active { transition: all 0.25s ease; }
-        .modal-enter-from, .modal-leave-to { opacity: 0; transform: scale(0.95); }
-
-        .toast-enter-active, .toast-leave-active { transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-20px); }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 9999px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
-
-        [v-cloak] { display: none !important; }
-        
-        /* Glassmorphism & Cartão Virtual */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(12px);
-        }
-        .virtual-card-chip {
-            width: 32px;
-            height: 24px;
-            background: linear-gradient(135deg, #ffd700, #b8860b);
-            border-radius: 4px;
-            position: relative;
-            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15);
-        }
-
-        /* Animações do Gravador de Voz com IA */
-        @keyframes pulse-ring {
-            0% { transform: scale(0.92); opacity: 0.8; }
-            50% { transform: scale(1.22); opacity: 0.25; }
-            100% { transform: scale(0.92); opacity: 0.8; }
-        }
-        .pulse-ring-anim {
-            animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        @keyframes sound-bar-anim {
-            0%, 100% { height: 6px; }
-            50% { height: 28px; }
-        }
-        .sound-bar {
-            animation: sound-bar-anim 1s ease-in-out infinite;
-        }
-    </style>
+    <script src="./vendor/vue.global.prod.js"></script>
 </head>
-<body class="h-full antialiased text-slate-800 bg-slate-950 flex justify-center selection:bg-brand-500 selection:text-white">
+<body>
 
-<div id="app" v-cloak class="w-full max-w-md min-h-screen bg-slate-50 flex flex-col relative shadow-2xl overflow-x-hidden border-x border-slate-200/50">
+<!-- Ícones (sprite) -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+    <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h8M20 6h-2M4 12h2M20 12h-8M4 18h10M20 18h-2"/><circle cx="15" cy="6" r="2.4"/><circle cx="9" cy="12" r="2.4"/><circle cx="17" cy="18" r="2.4"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V5M7 9l5-5 5 5M5 20h14"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h4"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M21.5 20a6 6 0 0 0-4-5.6"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 3 3-3 3M3 11V9a4 4 0 0 1 4-4h13M7 22l-3-3 3-3M21 13v2a4 4 0 0 1-4 4H4"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17v4M17 19h4"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
+    <symbol id="i-wa" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12.03 3a8.9 8.9 0 0 0-7.6 13.5L3 21l4.6-1.4A8.9 8.9 0 1 0 12.03 3zm5.1 12.4c-.2.6-1.2 1.1-1.7 1.2-.4.1-1 .1-1.6-.1a14 14 0 0 1-1.5-.5c-2.6-1.1-4.3-3.7-4.4-3.9-.1-.2-1.1-1.4-1.1-2.7s.7-1.9.9-2.2c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.1.1.3 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.7 1.2 1.5 1.9 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.8-.1 1.4z"/></symbol>
+</svg>
 
-    <!-- TOAST NOTIFICATIONS -->
-    <transition name="toast">
-        <div v-if="toast.show" 
-             :class="[
-                 'fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl shadow-xl border flex items-center gap-3 text-xs font-semibold max-w-[90%] transition-all',
-                 toast.type === 'success' ? 'bg-emerald-950/90 text-emerald-200 border-emerald-500/30 backdrop-blur-md' :
-                 toast.type === 'error' ? 'bg-rose-950/90 text-rose-200 border-rose-500/30 backdrop-blur-md' :
-                 'bg-slate-900/90 text-slate-100 border-slate-700/50 backdrop-blur-md'
-             ]">
-            <span>{{ toast.icon }}</span>
-            <span class="truncate">{{ toast.message }}</span>
-        </div>
-    </transition>
+<div id="app" v-cloak class="app">
 
-    <!-- ========================================== -->
-    <!-- TELA DE AUTENTICAÇÃO (LOGIN / REGISTRO)   -->
-    <!-- ========================================== -->
-    <div v-if="!user" class="flex-1 flex flex-col justify-between p-6 bg-gradient-to-b from-slate-900 via-slate-850 to-slate-950 text-white min-h-screen">
-        
-        <!-- Header da Marca -->
-        <div class="pt-8 text-center">
-            <div class="inline-flex p-3 rounded-3xl bg-brand-500/10 border border-brand-400/20 shadow-inner mb-4">
-                <img src="./icon.png" alt="Logo" class="w-16 h-16 rounded-2xl shadow-lg object-cover">
-            </div>
-            <h1 class="text-2xl font-black tracking-tight text-white flex items-center justify-center gap-1.5">
-                Gestor de Faturas
-            </h1>
-            <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-                Controle compartilhado de cartões, faturas e divisões com facilidade e precisão.
-            </p>
-        </div>
-
-        <!-- Formulário de Auth -->
-        <div class="my-auto bg-slate-800/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-700/60 shadow-2xl space-y-4">
-            
-            <!-- Segmented switch Login / Cadastro -->
-            <div class="grid grid-cols-2 p-1 bg-slate-900/70 rounded-2xl border border-slate-700/40 text-xs font-bold">
-                <button type="button" @click="authMode = 'login'"
-                        :class="authMode === 'login' ? 'bg-brand-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'"
-                        class="py-2.5 rounded-xl transition-all">
-                    Entrar
-                </button>
-                <button type="button" @click="authMode = 'signup'"
-                        :class="authMode === 'signup' ? 'bg-brand-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'"
-                        class="py-2.5 rounded-xl transition-all">
-                    Criar Conta
-                </button>
-            </div>
-
-            <form @submit.prevent="handleAuth" class="space-y-3.5">
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">E-mail</label>
-                    <div class="relative">
-                        <input v-model="authForm.email" type="email" required placeholder="seu@email.com"
-                               class="w-full bg-slate-900/90 border border-slate-700 text-white rounded-xl px-3.5 py-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition placeholder-slate-500">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">Senha</label>
-                    <input v-model="authForm.password" type="password" required placeholder="••••••••"
-                           class="w-full bg-slate-900/90 border border-slate-700 text-white rounded-xl px-3.5 py-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition placeholder-slate-500">
-                </div>
-
-                <button type="submit" :disabled="loading"
-                        class="w-full mt-2 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white py-3.5 rounded-xl font-bold text-sm shadow-lg shadow-brand-500/25 transition active:scale-[0.99] disabled:opacity-50 flex justify-center items-center gap-2">
-                    <svg v-if="loading" class="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                    </svg>
-                    <span>{{ loading ? 'Processando...' : (authMode === 'login' ? 'Acessar Gestor' : 'Concluir Cadastro') }}</span>
-                </button>
-            </form>
-        </div>
-
-        <!-- Footer -->
-        <div class="text-center text-[11px] text-slate-500 py-2">
-            Sincronização em nuvem segura via Google Firebase
-        </div>
+    <!-- ======================= CARREGANDO ======================= -->
+    <div v-if="!authReady" class="auth" style="align-items:center">
+        <img src="./icons/icon-192.png" alt="" width="72" height="72" style="border-radius:20px">
     </div>
 
-    <!-- ========================================== -->
-    <!-- APLICAÇÃO PRINCIPAL (USUÁRIO AUTENTICADO)  -->
-    <!-- ========================================== -->
-    <template v-else>
+    <!-- ======================= LOGIN / CADASTRO ======================= -->
+    <div v-else-if="!user" class="auth">
+        <div class="logo">
+            <img src="./icons/icon-192.png" alt="Gestor de Faturas">
+            <h1>Gestor de Faturas</h1>
+            <p>Cartões, faturas e divisões compartilhadas, sem complicação.</p>
+        </div>
 
-        <!-- TOP APP BAR (HEADER REFORMULADO) -->
-        <header class="bg-slate-900 text-white px-4 py-3 sticky top-0 z-30 shadow-md border-b border-slate-800 flex items-center justify-between safe-top">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 p-0.5 shadow-sm flex items-center justify-center">
-                    <img src="./icon.png" alt="App Icon" class="w-full h-full rounded-[10px] object-cover">
+        <div class="card stack">
+            <div class="seg">
+                <button type="button" :class="{ on: authMode === 'login' }" @click="authMode = 'login'">Entrar</button>
+                <button type="button" :class="{ on: authMode === 'signup' }" @click="authMode = 'signup'">Criar conta</button>
+            </div>
+            <form class="stack" @submit.prevent="handleAuth">
+                <div class="field">
+                    <label for="email">E-mail</label>
+                    <input id="email" class="input" v-model="authForm.email" type="email" required autocomplete="email" inputmode="email" placeholder="voce@email.com">
                 </div>
-                <div>
-                    <h1 class="text-sm font-extrabold tracking-tight text-white leading-none">Gestor de Faturas</h1>
-                    <p class="text-[10px] font-medium text-emerald-400 mt-0.5 flex items-center gap-1.5">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                        <span>Nuvem Conectada</span>
-                    </p>
+                <div class="field">
+                    <label for="password">Senha</label>
+                    <div class="prefix">
+                        <input id="password" class="input" style="padding-left:14px;padding-right:72px" v-model="authForm.password"
+                               :type="showPassword ? 'text' : 'password'" required minlength="6"
+                               :autocomplete="authMode === 'login' ? 'current-password' : 'new-password'" placeholder="Mínimo de 6 caracteres">
+                        <button type="button" class="link" style="position:absolute;right:14px;top:50%;transform:translateY(-50%)" @click="showPassword = !showPassword">
+                            {{ showPassword ? 'Ocultar' : 'Mostrar' }}
+                        </button>
+                    </div>
+                </div>
+                <button class="btn primary block" type="submit" :disabled="loading">
+                    {{ loading ? 'Aguarde…' : (authMode === 'login' ? 'Entrar' : 'Criar conta') }}
+                </button>
+                <button v-if="authMode === 'login'" type="button" class="link" @click="resetPassword">Esqueci minha senha</button>
+            </form>
+        </div>
+        <p class="hint" style="text-align:center">Seus dados ficam sincronizados na nuvem e disponíveis offline.</p>
+    </div>
+
+    <!-- ======================= APLICATIVO ======================= -->
+    <template v-else>
+        <header class="topbar">
+            <div class="brand">
+                <img src="./icons/icon-192.png" alt="">
+                <div class="min-w-0">
+                    <h1>Gestor de Faturas</h1>
+                    <div class="sync"><span class="dot" :class="syncDotClass"></span>{{ syncLabel }}</div>
                 </div>
             </div>
-
-            <!-- Botões de Ação Topo -->
-            <div class="flex items-center gap-2">
-                <!-- Botão Rápido de Lançamento por Voz -->
-                <button @click="openVoiceModal" 
-                        class="p-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md shadow-purple-900/30 flex items-center justify-center transition active:scale-95" 
-                        title="Lançamento por Voz com IA (Groq Whisper V3)">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
-                    </svg>
-                </button>
-
-                <!-- Símbolo Estático de Nuvem Conectada -->
-                <div class="p-1.5 rounded-xl bg-slate-800 border border-slate-700 text-emerald-400 flex items-center justify-center" 
-                     title="Sincronizado na Nuvem">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"></path>
-                    </svg>
-                </div>
-
-                <!-- Avatar / Menu Perfil -->
-                <button @click="profileModalOpen = true" 
-                        class="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-sm border border-brand-400/30 hover:opacity-90 active:scale-95 transition">
-                    {{ (user.email || 'U').charAt(0).toUpperCase() }}
-                </button>
+            <div class="top-actions">
+                <button class="icon-btn brand-fill" @click="openVoiceModal" aria-label="Lançar por voz"><svg class="i"><use href="#i-mic"/></svg></button>
+                <button class="icon-btn avatar" @click="profileModalOpen = true" aria-label="Conta">{{ initial(user.email) }}</button>
             </div>
         </header>
 
-        <!-- CONTEÚDO PRINCIPAL (MAIN BODY) -->
-        <main class="flex-1 overflow-y-auto tab-content p-4 space-y-4">
+        <main class="page">
             <transition name="fade" mode="out-in">
 
-                <!-- ========================================== -->
-                <!-- ABA 1: LANÇAMENTOS (NOVO & RECENTES)       -->
-                <!-- ========================================== -->
-                <div v-if="currentTab === 'lancamentos'" key="lanc" class="space-y-4">
-                    
-                    <!-- Form Card -->
-                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80">
-                        <div class="flex items-center justify-between mb-3.5">
-                            <div class="flex items-center gap-2">
-                                <span class="p-1.5 rounded-lg bg-brand-50 text-brand-600 font-bold">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                                </span>
-                                <h2 class="text-sm font-bold text-slate-800">
-                                    {{ isEditingTx ? 'Editar Lançamento' : 'Novo Lançamento' }}
-                                </h2>
+                <!-- ================= INÍCIO ================= -->
+                <div v-if="currentTab === 'home'" key="home" class="stack" style="gap:14px">
+
+                    <div class="month-nav">
+                        <button class="icon-btn" @click="navigateMonth(-1)" aria-label="Mês anterior"><svg class="i"><use href="#i-left"/></svg></button>
+                        <div class="label">
+                            <strong>{{ formatMonthLabel(viewMonth) }}</strong>
+                            <button v-if="!isCurrentMonth" @click="goToday">Voltar para hoje</button>
+                            <input v-model="viewMonth" type="month" aria-label="Escolher mês">
+                        </div>
+                        <button class="icon-btn" @click="navigateMonth(1)" aria-label="Próximo mês"><svg class="i"><use href="#i-right"/></svg></button>
+                    </div>
+
+                    <!-- Primeiros passos -->
+                    <div v-if="noCards" class="card stack" style="text-align:center">
+                        <span style="font-size:40px">💳</span>
+                        <div><strong style="font-size:17px">Vamos começar</strong>
+                            <p class="hint" style="margin:4px 0 0">Cadastre seu primeiro cartão com os dias de fechamento e vencimento para que as faturas sejam calculadas.</p></div>
+                        <button class="btn primary" @click="goTab('settings'); openNewCard()">Cadastrar cartão</button>
+                    </div>
+
+                    <template v-else>
+                        <div class="hero">
+                            <div class="label">Fatura do mês</div>
+                            <div class="value num">{{ formatCents(dash.charges) }}</div>
+                            <div class="row" style="flex-wrap:wrap;gap:6px;position:relative;z-index:1">
+                                <span v-if="dash.delta !== null" class="pill">{{ dash.delta > 0 ? '▲' : (dash.delta < 0 ? '▼' : '=') }} {{ Math.abs(dash.delta) }}% vs. mês anterior</span>
+                                <span v-else class="pill">Sem mês anterior para comparar</span>
+                                <span v-if="dash.debt > 0" class="pill">+ {{ formatCents(dash.debt) }} em aberto</span>
                             </div>
-                            <button v-if="isEditingTx" @click="cancelEditTx" class="text-xs text-rose-500 font-bold hover:underline">
-                                Cancelar
-                            </button>
                         </div>
 
-                        <!-- Botão Chamativo de Lançamento por Voz com IA -->
-                        <div v-if="!isEditingTx" class="mb-3.5">
-                            <button type="button" @click="openVoiceModal"
-                                    class="w-full relative overflow-hidden group bg-gradient-to-r from-purple-600 via-indigo-600 to-brand-600 hover:from-purple-500 hover:to-brand-500 text-white p-3 rounded-2xl font-bold text-xs shadow-md shadow-indigo-500/20 flex items-center justify-between transition active:scale-[0.98]">
-                                <div class="flex items-center gap-2.5">
-                                    <div class="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-sm shadow-inner group-hover:scale-110 transition">
-                                        🎙️
-                                    </div>
-                                    <div class="text-left">
-                                        <p class="font-extrabold text-xs leading-tight flex items-center gap-1.5">
-                                            <span>Falar com a IA</span>
-                                            <span class="text-[9px] bg-emerald-400/25 text-emerald-200 px-1.5 py-0.5 rounded font-semibold">Groq Whisper V3</span>
-                                        </p>
-                                        <p class="text-[10px] text-white/80 font-medium mt-0.5">Lançamento 100% automático por voz</p>
-                                    </div>
-                                </div>
-                                <span class="text-[11px] bg-white/20 hover:bg-white/30 px-2.5 py-1 rounded-xl font-extrabold tracking-wide uppercase flex items-center gap-1">
-                                    <span>Falar</span>
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
-                                </span>
-                            </button>
+                        <div class="grid2">
+                            <div class="stat">
+                                <div class="k">Minha parte</div>
+                                <div class="v num" :class="{ pos: dash.minePaid && dash.mineTotal }">{{ formatCents(dash.mineTotal) }}</div>
+                                <div class="s">{{ !dash.mineTotal ? 'nada neste mês' : (dash.minePaid ? 'paga ✓' : 'em aberto') }}</div>
+                            </div>
+                            <div class="stat">
+                                <div class="k">A receber</div>
+                                <div class="v num" :class="{ neg: dash.receivable > 0 }">{{ formatCents(dash.receivable) }}</div>
+                                <div class="s">{{ dash.debtors ? dash.debtors + (dash.debtors === 1 ? ' pessoa deve' : ' pessoas devem') : 'tudo em dia ✓' }}</div>
+                            </div>
                         </div>
 
-                        <form @submit.prevent="addTransaction" class="space-y-3">
-                            <!-- Descrição -->
-                            <div>
-                                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Descrição</label>
-                                <input v-model="formTx.description" type="text" required placeholder="Ex: Supermercado, Netflix, Restaurante"
-                                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/10 transition">
-                            </div>
-
-                            <!-- Tipo de Lançamento (Segmented Control) -->
-                            <div>
-                                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tipo de Despesa</label>
-                                <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl text-xs font-semibold text-slate-600">
-                                    <button type="button" @click="formTx.type = 'single'"
-                                            :class="formTx.type === 'single' ? 'bg-white text-brand-600 shadow-sm' : 'hover:text-slate-900'"
-                                            class="py-2 rounded-lg transition text-center">
-                                        À Vista
-                                    </button>
-                                    <button type="button" @click="formTx.type = 'installment'"
-                                            :class="formTx.type === 'installment' ? 'bg-white text-brand-600 shadow-sm' : 'hover:text-slate-900'"
-                                            class="py-2 rounded-lg transition text-center">
-                                        Parcelada
-                                    </button>
-                                    <button type="button" @click="formTx.type = 'subscription'"
-                                            :class="formTx.type === 'subscription' ? 'bg-white text-brand-600 shadow-sm' : 'hover:text-slate-900'"
-                                            class="py-2 rounded-lg transition text-center">
-                                        Mensal
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Valor e Data -->
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <div class="flex justify-between items-center mb-1">
-                                        <label class="block text-[11px] font-bold text-slate-500 uppercase">Valor</label>
-                                        <select v-if="formTx.type === 'installment'" v-model="formTx.amountType" 
-                                                class="text-[10px] bg-brand-50 text-brand-700 border border-brand-200 rounded-md px-1.5 py-0.5 outline-none font-bold">
-                                            <option value="total">Valor Total</option>
-                                            <option value="installment">Por Parcela</option>
-                                        </select>
+                        <div v-if="dash.dues.length" class="stack" style="gap:10px">
+                            <div class="section-title"><h2>Vencimentos</h2></div>
+                            <div class="card stack" style="gap:2px;padding:6px 16px">
+                                <div v-for="d in dash.dues" :key="d.card.id" class="row between" style="padding:10px 0">
+                                    <div class="row" style="min-width:0">
+                                        <span class="cat-ico" :style="{ background: d.card.color || '#4338ca', color: '#fff' }"><svg class="i sm"><use href="#i-card"/></svg></span>
+                                        <div style="min-width:0">
+                                            <div class="truncate" style="font-weight:700;font-size:14px">{{ d.card.name }}</div>
+                                            <div class="small muted" style="font-weight:600">dia {{ d.day }}</div>
+                                        </div>
                                     </div>
-                                    <div class="relative">
-                                        <span class="absolute left-3 top-2.5 text-xs font-bold text-slate-400">R$</span>
-                                        <input v-model.number="formTx.amount" type="number" step="0.01" required placeholder="0,00"
-                                               class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/10 transition">
+                                    <div style="text-align:right">
+                                        <div class="num" style="font-weight:800">{{ formatCents(d.amount) }}</div>
+                                        <span class="pill" :class="dueClass(d)" style="margin-top:2px">{{ dueLabel(d) }}</span>
                                     </div>
                                 </div>
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Data da Compra</label>
-                                    <input v-model="formTx.date" type="date" required
-                                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-800 outline-none focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/10 transition">
+                            </div>
+                        </div>
+
+                        <div v-if="dash.categories.length" class="stack" style="gap:10px">
+                            <div class="section-title"><h2>Para onde foi o dinheiro</h2></div>
+                            <div class="card stack" style="gap:14px">
+                                <div v-for="c in dash.categories" :key="c.id" class="cat-row">
+                                    <span class="cat-ico" :style="{ background: c.color + '22' }">{{ c.icon }}</span>
+                                    <div class="grow">
+                                        <div class="row between" style="margin-bottom:5px">
+                                            <span style="font-weight:700;font-size:13px">{{ c.name }}</span>
+                                            <span class="num small" style="font-weight:800">{{ formatCents(c.amount) }} <span class="muted">· {{ c.pct }}%</span></span>
+                                        </div>
+                                        <div class="meter"><div :style="{ width: c.pct + '%', background: c.color }"></div></div>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Parcelas (se parcelado) -->
-                            <div v-if="formTx.type === 'installment'" class="p-3 bg-brand-50/70 border border-brand-100 rounded-2xl space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <label class="text-xs font-bold text-brand-900">Número de Parcelas</label>
-                                    <input v-model.number="formTx.installments" type="number" min="2" max="60" required
-                                           class="w-20 bg-white border border-brand-200 rounded-xl px-2 py-1.5 text-center font-bold text-brand-700 outline-none focus:border-brand-500 text-sm">
+                        <div class="stack" style="gap:10px">
+                            <div class="section-title"><h2>Últimos 6 meses</h2></div>
+                            <div class="card">
+                                <div class="bars">
+                                    <div v-for="t in dash.trend" :key="t.month" class="col" :class="{ active: t.active }">
+                                        <span class="amt num">{{ t.value ? Math.round(t.value / 100).toLocaleString('pt-BR') : '' }}</span>
+                                        <div class="bar" :style="{ height: t.h + '%' }"></div>
+                                        <span class="lbl">{{ t.label }}</span>
+                                    </div>
                                 </div>
-                                <div v-if="formTx.amount" class="text-[11px] font-semibold text-brand-700 flex items-center justify-between pt-1 border-t border-brand-200/50">
-                                    <span>Resumo do Parcelamento:</span>
-                                    <span>
-                                        {{ formTx.amountType === 'total' 
-                                            ? `${formTx.installments}x de ${formatMoney(formTx.amount / (formTx.installments || 1))}`
-                                            : `${formTx.installments}x de ${formatMoney(formTx.amount)} (Total: ${formatMoney(formTx.amount * formTx.installments)})` 
-                                        }}
+                            </div>
+                        </div>
+
+                        <div v-if="!hasTransactions" class="empty card flat">
+                            <span class="big">🧾</span>
+                            <strong>Nenhum lançamento ainda</strong>
+                            Toque no <b>+</b> ou no microfone para registrar sua primeira compra.
+                        </div>
+                    </template>
+                </div>
+
+                <!-- ================= LANÇAMENTOS ================= -->
+                <div v-else-if="currentTab === 'tx'" key="tx" class="stack" style="gap:12px">
+                    <div class="section-title"><h2>Lançamentos</h2><span class="count">{{ filteredTransactions.length }}</span></div>
+
+                    <div class="prefix">
+                        <span style="left:14px"><svg class="i sm"><use href="#i-search"/></svg></span>
+                        <input class="input" style="padding-left:40px" v-model="searchQuery" type="search" placeholder="Buscar descrição, pessoa ou cartão">
+                    </div>
+
+                    <div v-if="people.length > 1" class="chips">
+                        <button class="chip" :class="{ on: personFilter === 'all' }" @click="personFilter = 'all'">Todos</button>
+                        <button v-for="p in people" :key="p" class="chip" :class="{ on: personFilter === p }" @click="personFilter = p">{{ p }}</button>
+                    </div>
+                    <div v-if="usedCategories.length > 1" class="chips">
+                        <button class="chip" :class="{ on: categoryFilter === 'all' }" @click="categoryFilter = 'all'">Todas as categorias</button>
+                        <button v-for="c in usedCategories" :key="c.id" class="chip" :class="{ on: categoryFilter === c.id }" @click="categoryFilter = c.id">{{ c.icon }} {{ c.name }}</button>
+                    </div>
+
+                    <div v-if="!filteredTransactions.length" class="empty card flat">
+                        <span class="big">🔎</span>
+                        <strong>{{ hasTransactions ? 'Nada encontrado' : 'Nenhum lançamento ainda' }}</strong>
+                        {{ hasTransactions ? 'Ajuste a busca ou os filtros.' : 'Toque no + para registrar uma compra.' }}
+                    </div>
+
+                    <template v-else>
+                        <div v-for="g in groupedTransactions" :key="g.date" class="list">
+                            <div class="day-label">{{ g.label }}</div>
+                            <button v-for="tx in g.items" :key="tx.id" class="item" style="text-align:left;width:100%" @click="editTransaction(tx)">
+                                <span class="ico" :style="{ background: getCategory(tx.category).color + '22' }">{{ getCategory(tx.category).icon }}</span>
+                                <span class="grow">
+                                    <span class="title truncate" style="display:block">{{ tx.description }}</span>
+                                    <span class="meta">
+                                        <span class="row" style="gap:5px"><span class="swatch" :style="{ background: getPersonColor(tx.person) }"></span>{{ tx.person }}</span>
+                                        <span>{{ getCardName(tx.cardId) }}</span>
+                                        <span v-if="tx.type === 'installment'" class="tag brand">{{ tx.installments }}x</span>
+                                        <span v-else-if="tx.type === 'subscription'" class="tag warn">Mensal</span>
                                     </span>
-                                </div>
-                            </div>
-
-                            <!-- Cartão e Pessoa -->
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Cartão</label>
-                                    <select v-model="formTx.cardId" required 
-                                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-brand-500 focus:bg-white transition">
-                                        <option disabled value="">Selecione o cartão...</option>
-                                        <option v-for="card in cards" :value="card.id" :key="card.id">{{ card.name }}</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Dono do Gasto</label>
-                                    <select v-model="formTx.person" @change="handlePersonSelectChange" required 
-                                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-brand-500 focus:bg-white transition">
-                                        <option v-for="p in people" :value="p" :key="p">{{ p }}</option>
-                                        <option value="NEW_PERSON" class="font-bold text-brand-600">+ Nova Pessoa...</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Botões de Ação do Form -->
-                            <div class="pt-1 flex gap-2">
-                                <button v-if="isEditingTx" type="button" @click="cancelEditTx"
-                                        class="w-1/3 bg-slate-100 text-slate-700 py-3 rounded-2xl font-bold text-xs hover:bg-slate-200 transition">
-                                    Cancelar
-                                </button>
-                                <button type="submit" 
-                                        class="flex-1 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white py-3 rounded-2xl font-bold text-xs shadow-lg shadow-brand-500/20 active:scale-[0.99] transition flex items-center justify-center gap-2">
-                                    <span>{{ isEditingTx ? 'Atualizar Lançamento' : 'Salvar Lançamento' }}</span>
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- Lista de Recentes com Busca e Filtros -->
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Lançamentos Recentes</h3>
-                            <span class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                                {{ filteredTransactions.length }} total
-                            </span>
-                        </div>
-
-                        <!-- Barra de Busca -->
-                        <div class="relative">
-                            <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                            <input v-model="searchQuery" type="text" placeholder="Buscar por descrição, pessoa ou cartão..."
-                                   class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200/90 rounded-2xl text-xs font-medium text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 transition shadow-sm">
-                            <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600">✕</button>
-                        </div>
-
-                        <!-- Empty State -->
-                        <div v-if="filteredTransactions.length === 0" class="bg-white p-8 rounded-3xl text-center border border-dashed border-slate-200 text-slate-400">
-                            <span class="text-3xl block mb-2">🧾</span>
-                            <p class="text-xs font-bold text-slate-600">Nenhum lançamento encontrado</p>
-                            <p class="text-[11px] text-slate-400 mt-0.5">Cadastre suas despesas no formulário acima.</p>
-                        </div>
-
-                        <!-- Cards dos Lançamentos -->
-                        <div v-else class="space-y-2">
-                            <div v-for="tx in filteredTransactions.slice(0, 15)" :key="tx.id" 
-                                 class="bg-white p-3.5 rounded-2xl border border-slate-200/70 shadow-sm flex items-center justify-between gap-3 hover:border-brand-300 transition">
-                                
-                                <div class="flex items-center gap-3 min-w-0">
-                                    <!-- Badge de Categoria/Tipo -->
-                                    <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0"
-                                         :style="{ backgroundColor: getPersonColor(tx.person) + '18', color: getPersonColor(tx.person) }">
-                                        {{ tx.person.charAt(0).toUpperCase() }}
-                                    </div>
-                                    
-                                    <div class="min-w-0">
-                                        <p class="text-xs font-bold text-slate-800 truncate leading-tight">{{ tx.description }}</p>
-                                        <div class="flex items-center gap-2 mt-1 text-[10px] text-slate-400 flex-wrap">
-                                            <span class="font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded-md">{{ getCardName(tx.cardId) }}</span>
-                                            <span>•</span>
-                                            <span class="font-bold" :style="{ color: getPersonColor(tx.person) }">{{ tx.person }}</span>
-                                            <span>•</span>
-                                            <span>{{ formatDate(tx.date) }}</span>
-                                            <span v-if="tx.type === 'installment'" class="bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded-md font-bold">
-                                                {{ tx.installments }}x
-                                            </span>
-                                            <span v-else-if="tx.type === 'subscription'" class="bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-md font-bold">
-                                                Mensal
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="text-right flex items-center gap-2 shrink-0">
-                                    <div>
-                                        <p class="text-xs font-extrabold text-slate-900">{{ formatMoney(tx.amount) }}</p>
-                                        <p v-if="tx.type === 'installment'" class="text-[9px] text-slate-400">
-                                            {{ tx.installments }}x de {{ formatMoney(tx.amount / tx.installments) }}
-                                        </p>
-                                    </div>
-                                    <div class="flex items-center gap-1">
-                                        <button @click="editTransaction(tx)" class="p-1.5 text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg transition" title="Editar">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                                        </button>
-                                        <button @click="confirmDeleteTx(tx.id)" class="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition" title="Excluir">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ========================================== -->
-                <!-- ABA 2: FATURAS & RELATÓRIOS (POR PESSOA)  -->
-                <!-- ========================================== -->
-                <div v-else-if="currentTab === 'relatorios'" key="rel" class="space-y-4">
-                    
-                    <!-- Seletor Rápido de Mês com Botões < e > -->
-                    <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
-                        <button @click="navigateMonth(-1)" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition" title="Mês Anterior">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" stroke-linecap="round" d="M15 19l-7-7 7-7"></path></svg>
-                        </button>
-                        
-                        <div class="text-center">
-                            <p class="text-xs font-black text-slate-800 capitalize">{{ formatMonthLabel(reportMonth) }}</p>
-                            <input v-model="reportMonth" type="month" class="text-[10px] text-brand-600 font-bold bg-transparent outline-none cursor-pointer">
-                        </div>
-
-                        <button @click="navigateMonth(1)" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition" title="Próximo Mês">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" stroke-linecap="round" d="M9 5l7 7-7 7"></path></svg>
-                        </button>
-                    </div>
-
-                    <!-- Caso não haja dados no mês -->
-                    <div v-if="!currentInvoiceData || currentInvoiceData.total === 0" class="bg-white p-8 rounded-3xl text-center border border-slate-200 shadow-sm text-slate-400">
-                        <span class="text-3xl block mb-2">🌴</span>
-                        <p class="text-xs font-bold text-slate-700">Nenhum gasto registrado para este mês</p>
-                        <p class="text-[11px] text-slate-400 mt-1">Navegue para outros meses ou adicione novos lançamentos.</p>
-                    </div>
-
-                    <!-- Resumo da Fatura & Cards por Pessoa -->
-                    <div v-else class="space-y-4">
-                        
-                        <!-- Hero Total da Fatura -->
-                        <div class="p-5 bg-gradient-to-br from-slate-900 via-slate-850 to-brand-950 rounded-3xl text-white shadow-xl border border-slate-800 relative overflow-hidden">
-                            <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl"></div>
-                            
-                            <div class="flex items-center justify-between text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">
-                                <span>Total da Fatura</span>
-                                <span class="bg-brand-500/20 text-brand-300 border border-brand-400/30 px-2 py-0.5 rounded-full text-[10px]">
-                                    {{ Object.keys(currentInvoiceData.byPerson).length }} devedor(es)
                                 </span>
-                            </div>
-                            
-                            <p class="text-3xl font-black tracking-tight text-white mt-1">
-                                {{ formatMoney(currentInvoiceData.total) }}
-                            </p>
-
-                            <!-- Barra de Distribuição de Gastos por Pessoa -->
-                            <div class="mt-4 pt-3 border-t border-slate-800">
-                                <div class="flex justify-between text-[10px] text-slate-400 font-semibold mb-1.5">
-                                    <span>Divisão do Mês</span>
-                                    <span>{{ reportStats.percentPaid }}% pago</span>
-                                </div>
-                                <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden flex">
-                                    <div v-for="(data, pName) in currentInvoiceData.byPerson" :key="pName"
-                                         :style="{ width: (data.total / currentInvoiceData.total * 100) + '%', backgroundColor: getPersonColor(pName) }"
-                                         :title="pName + ': ' + formatMoney(data.total)"
-                                         class="h-full transition-all"></div>
-                                </div>
-                            </div>
+                                <span class="amount num">
+                                    {{ formatMoney(tx.amount) }}
+                                    <small v-if="tx.type === 'installment'">{{ tx.installments }}x {{ formatMoney(tx.amount / tx.installments) }}</small>
+                                </span>
+                            </button>
                         </div>
-
-                        <!-- Lista de Cards por Pessoa -->
-                        <div class="space-y-3">
-                            <div v-for="(data, personName) in currentInvoiceData.byPerson" :key="personName"
-                                 class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden transition hover:shadow-md">
-                                
-                                <!-- Header do Card da Pessoa -->
-                                <div class="p-4 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
-                                    <div class="flex items-center gap-2.5">
-                                        <span class="w-3.5 h-3.5 rounded-full ring-4 ring-white shadow-sm" 
-                                              :style="{ backgroundColor: getPersonColor(personName) }"></span>
-                                        <div>
-                                            <h4 class="text-xs font-black text-slate-800">{{ personName }}</h4>
-                                            <p class="text-[10px] text-slate-400 font-semibold">
-                                                {{ data.items.length }} {{ data.items.length === 1 ? 'item' : 'itens' }}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div class="flex items-center gap-2">
-                                        <!-- Botão Status Pago/Pendente -->
-                                        <button @click="togglePayment(reportMonth, personName)" 
-                                                :class="payments[reportMonth]?.[personName] 
-                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
-                                                    : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'"
-                                                class="text-[10px] font-black px-2.5 py-1 rounded-full border transition flex items-center gap-1">
-                                            <span v-if="payments[reportMonth]?.[personName]">✓ PAGO</span>
-                                            <span v-else>⌛ PENDENTE</span>
-                                        </button>
-
-                                        <!-- Botão WhatsApp Cobrança -->
-                                        <button @click="exportToWhatsApp(personName, data.total, data.items)"
-                                                class="bg-emerald-600 hover:bg-emerald-500 text-white p-2 rounded-xl shadow-sm transition active:scale-95 flex items-center justify-center"
-                                                title="Enviar cobrança detalhada no WhatsApp">
-                                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.418-.099.823z"/></svg>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Valor Total e Lista de Itens -->
-                                <div class="p-4 space-y-3">
-                                    <div class="flex justify-between items-baseline">
-                                        <span class="text-[11px] font-bold text-slate-400 uppercase">Subtotal</span>
-                                        <span class="text-lg font-black text-slate-900" :class="{'line-through text-slate-400': payments[reportMonth]?.[personName]}">
-                                            {{ formatMoney(data.total) }}
-                                        </span>
-                                    </div>
-
-                                    <!-- Lista discriminada -->
-                                    <div class="space-y-1.5 pt-2 border-t border-slate-100">
-                                        <div v-for="item in data.items" :key="item.id" 
-                                             :class="item.isDebt ? 'bg-rose-50/80 border-rose-200 text-rose-800' : 'text-slate-700'"
-                                             class="flex justify-between items-center text-xs p-2 rounded-xl border border-transparent">
-                                            
-                                            <div class="truncate pr-2">
-                                                <span class="font-bold">{{ item.desc }}</span>
-                                                <span v-if="item.parcelaInfo" class="text-[10px] text-slate-500 font-semibold ml-1">
-                                                    {{ item.parcelaInfo }}
-                                                </span>
-                                            </div>
-
-                                            <div class="flex items-center gap-2 shrink-0">
-                                                <span class="font-extrabold" :class="item.isDebt ? 'text-rose-700' : 'text-slate-900'">
-                                                    {{ formatMoney(item.amount) }}
-                                                </span>
-                                                <div v-if="!item.isDebt" class="flex items-center gap-1">
-                                                    <button @click="editTransactionById(item.id)" class="p-1 text-brand-600 hover:bg-brand-50 rounded" title="Editar">
-                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                                                    </button>
-                                                    <button @click="confirmDeleteTx(item.id)" class="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Excluir">
-                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                        <button v-if="filteredTransactions.length > visibleCount" class="btn block" @click="visibleCount += 30">
+                            Ver mais ({{ filteredTransactions.length - visibleCount }})
+                        </button>
+                    </template>
                 </div>
 
-                <!-- ========================================== -->
-                <!-- ABA 3: AJUSTES & CONFIGURAÇÕES             -->
-                <!-- ========================================== -->
-                <div v-else-if="currentTab === 'config'" key="conf" class="space-y-4">
-                    
-                    <!-- Gerenciar Cartões de Crédito (com layout de Cartão Virtual) -->
-                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80 space-y-4">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <span class="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 font-bold">💳</span>
-                                {{ isEditingCard ? 'Editar Cartão' : 'Meus Cartões de Crédito' }}
-                            </h2>
-                            <span class="text-[11px] font-bold text-slate-400">{{ cards.length }} cadastrado(s)</span>
+                <!-- ================= FATURAS ================= -->
+                <div v-else-if="currentTab === 'bills'" key="bills" class="stack" style="gap:14px">
+
+                    <div class="month-nav">
+                        <button class="icon-btn" @click="navigateMonth(-1)" aria-label="Mês anterior"><svg class="i"><use href="#i-left"/></svg></button>
+                        <div class="label">
+                            <strong>{{ formatMonthLabel(viewMonth) }}</strong>
+                            <button v-if="!isCurrentMonth" @click="goToday">Voltar para hoje</button>
+                            <input v-model="viewMonth" type="month" aria-label="Escolher mês">
+                        </div>
+                        <button class="icon-btn" @click="navigateMonth(1)" aria-label="Próximo mês"><svg class="i"><use href="#i-right"/></svg></button>
+                    </div>
+
+                    <div v-if="cards.length > 1" class="chips">
+                        <button class="chip" :class="{ on: cardFilter === 'all' }" @click="cardFilter = 'all'">Todos os cartões</button>
+                        <button v-for="c in cards" :key="c.id" class="chip" :class="{ on: cardFilter === c.id }" @click="cardFilter = c.id">{{ c.name }}</button>
+                    </div>
+
+                    <div v-if="!invoiceView" class="empty card flat">
+                        <span class="big">🌴</span>
+                        <strong>Nenhum gasto neste mês</strong>
+                        Navegue para outro mês ou adicione um lançamento.
+                    </div>
+
+                    <template v-else>
+                        <div class="hero">
+                            <div class="row between"><span class="label">Total a receber / pagar</span><span class="pill">{{ invoiceView.people.length }} {{ invoiceView.people.length === 1 ? 'pessoa' : 'pessoas' }}</span></div>
+                            <div class="value num">{{ formatCents(invoiceView.total) }}</div>
+                            <div class="split-bar">
+                                <div v-for="p in invoiceView.people" :key="p.name" :style="{ width: (p.total / invoiceView.total * 100) + '%', background: getPersonColor(p.name) }" :title="p.name"></div>
+                            </div>
+                            <div class="row between small" style="margin-top:10px;position:relative;z-index:1;opacity:.9;font-weight:700">
+                                <span>{{ formatCents(invoiceView.paidCents) }} pago</span><span>{{ invoiceView.pct }}%</span>
+                            </div>
                         </div>
 
-                        <!-- Form de Cartão -->
-                        <form @submit.prevent="addCard" class="space-y-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200/60">
-                            <div>
-                                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Nome do Cartão / Banco</label>
-                                <input v-model="formCard.name" required placeholder="Ex: Nubank Ultravioleta, C6 Black, Itaú"
-                                       class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:border-brand-500">
-                            </div>
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Dia Fechamento</label>
-                                    <input v-model.number="formCard.closingDay" type="number" min="1" max="31" required placeholder="Dia"
-                                           class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:border-brand-500">
+                        <div v-for="p in invoiceView.people" :key="p.name" class="card">
+                            <div class="row between">
+                                <div class="person-head">
+                                    <span class="person-dot" :style="{ background: getPersonColor(p.name) }">{{ initial(p.name) }}</span>
+                                    <div><div style="font-weight:800">{{ p.name }}</div><div class="small muted" style="font-weight:600">{{ p.items.length }} {{ p.items.length === 1 ? 'item' : 'itens' }}</div></div>
                                 </div>
-                                <div>
-                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Dia Vencimento</label>
-                                    <input v-model.number="formCard.dueDay" type="number" min="1" max="31" required placeholder="Dia"
-                                           class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:border-brand-500">
-                                </div>
-                            </div>
-                            <div class="flex gap-2 pt-1">
-                                <button v-if="isEditingCard" type="button" @click="cancelEditCard"
-                                        class="w-1/3 bg-slate-200 text-slate-700 py-2 rounded-xl text-xs font-bold">
-                                    Cancelar
-                                </button>
-                                <button type="submit" 
-                                        class="flex-1 bg-slate-900 text-white py-2 rounded-xl text-xs font-bold hover:bg-slate-800 transition">
-                                    {{ isEditingCard ? 'Salvar Alterações' : '+ Adicionar Cartão' }}
+                                <button class="status-btn" :class="p.paid ? 'paid' : 'pending'" @click="togglePayment(viewMonth, p.name)">
+                                    <svg v-if="p.paid" class="i sm"><use href="#i-check"/></svg>{{ p.paid ? 'Pago' : 'Pendente' }}
                                 </button>
                             </div>
-                        </form>
 
-                        <!-- Visualização de Cartões Virtuais -->
-                        <div class="space-y-2.5">
-                            <div v-for="card in cards" :key="card.id"
-                                 class="p-4 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-indigo-950 text-white shadow-md border border-slate-700/50 flex items-center justify-between">
-                                
-                                <div>
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <div class="virtual-card-chip"></div>
-                                        <p class="font-extrabold text-sm text-white tracking-wide">{{ card.name }}</p>
-                                    </div>
-                                    <p class="text-[11px] text-slate-300 font-medium">
-                                        Fecha todo dia <span class="font-bold text-brand-300">{{ card.closingDay }}</span> • Vence dia <span class="font-bold text-emerald-300">{{ card.dueDay }}</span>
-                                    </p>
-                                </div>
+                            <div class="sub-row"><span class="lbl-up" style="margin:0">Total</span><span class="t num" :class="{ done: p.paid }">{{ formatCents(p.total) }}</span></div>
 
-                                <div class="flex items-center gap-1.5">
-                                    <button @click="editCard(card)" class="p-2 text-brand-300 bg-slate-800 hover:bg-slate-700 rounded-xl transition" title="Editar Cartão">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                                    </button>
-                                    <button @click="confirmDeleteCard(card.id)" class="p-2 text-rose-400 bg-slate-800 hover:bg-slate-700 rounded-xl transition" title="Excluir Cartão">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                    </button>
-                                </div>
+                            <div class="lines">
+                                <component :is="item.isDebt ? 'div' : 'button'" v-for="item in p.items" :key="item.id + '-' + item.parcelaInfo"
+                                           class="line" :class="{ debt: item.isDebt }" style="text-align:left;width:100%"
+                                           @click="!item.isDebt && editTransactionById(item.id)">
+                                    <span class="d truncate">{{ item.isDebt ? '⚠️ ' : '' }}{{ item.desc }}<small v-if="item.parcelaInfo">{{ item.parcelaInfo }}</small></span>
+                                    <span class="a num">{{ formatCents(item.amount) }}</span>
+                                </component>
                             </div>
+
+                            <div class="row" style="margin-top:12px;gap:8px">
+                                <button class="btn wa sm grow" @click="exportToWhatsApp(p)"><svg class="i sm"><use href="#i-wa"/></svg>Cobrar no WhatsApp</button>
+                                <button class="btn sm" @click="copySummary(p)" aria-label="Copiar resumo"><svg class="i sm"><use href="#i-copy"/></svg>Copiar</button>
+                            </div>
+                        </div>
+
+                        <button class="btn block" @click="exportCsv"><svg class="i sm"><use href="#i-download"/></svg>Exportar mês (planilha CSV)</button>
+                    </template>
+                </div>
+
+                <!-- ================= AJUSTES ================= -->
+                <div v-else key="settings" class="stack" style="gap:14px">
+
+                    <div class="section-title"><h2>Aparência</h2></div>
+                    <div class="card">
+                        <div class="seg">
+                            <button :class="{ on: themePref === 'auto' }" @click="setTheme('auto')">Automático</button>
+                            <button :class="{ on: themePref === 'light' }" @click="setTheme('light')">Claro</button>
+                            <button :class="{ on: themePref === 'dark' }" @click="setTheme('dark')">Escuro</button>
                         </div>
                     </div>
 
-                    <!-- Gerenciar Pessoas e Divisões -->
-                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80 space-y-3.5">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <span class="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 font-bold">👥</span>
-                                Pessoas e Devedores
-                            </h2>
-                            <span class="text-[11px] font-bold text-slate-400">{{ people.length }} pessoa(s)</span>
+                    <div class="section-title"><h2>Cartões</h2><button class="btn ghost sm" @click="openNewCard"><svg class="i sm"><use href="#i-plus"/></svg>Novo</button></div>
+                    <div v-if="!cards.length" class="empty card flat"><span class="big">💳</span><strong>Nenhum cartão</strong>Cadastre um cartão para começar a lançar compras.</div>
+                    <div v-for="c in cards" :key="c.id" class="credit" :style="{ background: 'linear-gradient(135deg,' + (c.color || '#4338ca') + ', color-mix(in srgb,' + (c.color || '#4338ca') + ' 55%, #000))' }">
+                        <div class="actions">
+                            <button @click="editCard(c)" aria-label="Editar cartão"><svg class="i sm"><use href="#i-edit"/></svg></button>
+                            <button @click="confirmDeleteCard(c)" aria-label="Excluir cartão"><svg class="i sm"><use href="#i-trash"/></svg></button>
                         </div>
+                        <div class="name">{{ c.name }}</div>
+                        <div class="dates"><span>Fecha<b>dia {{ c.closingDay }}</b></span><span>Vence<b>dia {{ c.dueDay }}</b></span><span>Compras<b>{{ cardUsage(c.id) }}</b></span></div>
+                    </div>
 
-                        <!-- Input Rápido Nova Pessoa -->
-                        <div class="flex gap-2">
-                            <input v-model="newPerson" @keyup.enter="addPerson" placeholder="Nome da pessoa (Ex: Maria, Carlos)" 
-                                   class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold outline-none focus:border-brand-500">
-                            <button @click="addPerson" class="bg-brand-600 hover:bg-brand-500 text-white px-4 rounded-xl font-black text-sm shadow-sm transition">
-                                +
-                            </button>
+                    <div class="section-title"><h2>Pessoas</h2><span class="count">{{ people.length }}</span></div>
+                    <div class="card stack">
+                        <div class="row">
+                            <input class="input grow" v-model="newPerson" @keyup.enter="addPerson" placeholder="Nome (ex.: Maria)">
+                            <button class="btn primary" @click="addPerson" aria-label="Adicionar pessoa"><svg class="i"><use href="#i-plus"/></svg></button>
                         </div>
-
-                        <!-- Lista de Pessoas com Tags -->
-                        <div class="flex flex-wrap gap-2 pt-1">
-                            <div v-for="p in people" :key="p" 
-                                 class="bg-slate-50 border border-slate-200/80 pl-3 pr-2 py-1.5 rounded-2xl text-xs flex items-center gap-2 shadow-sm">
-                                <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: getPersonColor(p) }"></span>
-                                <span class="font-extrabold text-slate-800">{{ p }}</span>
-                                
-                                <div class="flex items-center gap-1 ml-1 border-l pl-1.5 border-slate-200">
-                                    <button @click="clearPastDebts(p)" class="p-1 text-emerald-600 hover:bg-emerald-50 rounded" title="Quitar todas as dívidas passadas">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    </button>
-                                    <button @click="openEditPersonModal(p)" class="p-1 text-brand-600 hover:bg-brand-50 rounded" title="Editar Nome">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                                    </button>
-                                    <button v-if="p !== 'Eu'" @click="confirmRemovePerson(p)" class="p-1 text-rose-500 hover:bg-rose-50 rounded" title="Remover">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                    </button>
+                        <div class="stack" style="gap:2px">
+                            <div v-for="(p, idx) in people" :key="p" class="row between" style="padding:6px 0">
+                                <div class="row" style="min-width:0">
+                                    <button class="person-dot" style="width:34px;height:34px;border-radius:11px;font-size:14px" :style="{ background: getPersonColor(p) }" @click="cyclePersonColor(p)" title="Trocar cor">{{ initial(p) }}</button>
+                                    <div style="min-width:0"><div class="truncate" style="font-weight:700">{{ p }}</div><div v-if="idx === 0" class="small muted" style="font-weight:600">você</div></div>
+                                </div>
+                                <div class="row" style="gap:0">
+                                    <button class="mini-btn" @click="clearPastDebts(p)" title="Quitar histórico anterior ao mês atual" aria-label="Quitar histórico"><svg class="i sm"><use href="#i-check"/></svg></button>
+                                    <button class="mini-btn" @click="openEditPersonModal(p)" aria-label="Renomear"><svg class="i sm"><use href="#i-edit"/></svg></button>
+                                    <button v-if="idx !== 0" class="mini-btn bad" @click="confirmRemovePerson(p)" aria-label="Remover"><svg class="i sm"><use href="#i-trash"/></svg></button>
                                 </div>
                             </div>
                         </div>
+                        <p class="hint">Toque no círculo colorido para trocar a cor. O ✓ marca como pagas todas as faturas anteriores ao mês atual.</p>
                     </div>
 
-                    <!-- Configuração da Inteligência Artificial (Groq Cloud) -->
-                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80 space-y-3.5">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <span class="p-1.5 rounded-lg bg-purple-50 text-purple-600 font-bold">🎙️</span>
-                                Inteligência Artificial (Groq Cloud)
-                            </h2>
-                            <span class="text-[10px] font-extrabold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                                Whisper V3 + LLM
-                            </span>
+                    <div class="section-title"><h2>Cobrança por PIX</h2></div>
+                    <div class="card stack">
+                        <p class="hint" style="margin:0">Sua chave PIX é incluída automaticamente nas mensagens de cobrança.</p>
+                        <div class="row">
+                            <input class="input grow" v-model="userPixKey" placeholder="CPF, e-mail, telefone ou chave aleatória">
+                            <button class="btn" @click="savePixKey">Salvar</button>
                         </div>
-                        <p class="text-[11px] text-slate-500 leading-relaxed">
-                            Permite lançar despesas por comando de voz. A fala é transcrita com <strong>Whisper V3 Large</strong> e interpretada com <strong>{{ groqModel }}</strong>.
-                        </p>
+                        <button v-if="userPixKey" class="btn ghost" style="align-self:flex-start" @click="copyPix"><svg class="i sm"><use href="#i-copy"/></svg>Copiar chave</button>
+                    </div>
 
-                        <!-- Chave API Groq -->
-                        <div class="space-y-1">
-                            <div class="flex items-center justify-between">
-                                <label class="block text-[11px] font-bold text-slate-600 uppercase">Chave de API do Groq</label>
-                                <a href="https://console.groq.com/keys" target="_blank" class="text-[10px] text-brand-600 font-bold hover:underline flex items-center gap-1">
-                                    <span>Obter chave grátis</span>
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                                </a>
-                            </div>
-                            <div class="relative">
-                                <input v-model="groqApiKey" :type="showGroqKey ? 'text' : 'password'" placeholder="gsk_..."
-                                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono font-medium outline-none focus:border-brand-500 pr-10">
-                                <button type="button" @click="showGroqKey = !showGroqKey" 
-                                        class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs">
-                                    {{ showGroqKey ? '👁️' : '🔒' }}
-                                </button>
+                    <div class="section-title"><h2>Inteligência artificial</h2></div>
+                    <div class="card stack">
+                        <p class="hint" style="margin:0">Lance compras falando. A voz é transcrita pelo <b>Whisper</b> e interpretada pelo modelo escolhido, ambos na Groq Cloud.</p>
+                        <div class="field">
+                            <label>Chave de API da Groq <a class="link" style="float:right;text-transform:none;letter-spacing:0" href="https://console.groq.com/keys" target="_blank" rel="noopener">Obter grátis <svg class="i sm" style="vertical-align:-3px"><use href="#i-external"/></svg></a></label>
+                            <div class="prefix">
+                                <input class="input" style="padding-left:14px;padding-right:80px;font-family:ui-monospace,monospace;font-size:13px" v-model="groqApiKey" :type="showGroqKey ? 'text' : 'password'" placeholder="gsk_…" autocomplete="off">
+                                <button class="link" style="position:absolute;right:14px;top:50%;transform:translateY(-50%)" @click="showGroqKey = !showGroqKey">{{ showGroqKey ? 'Ocultar' : 'Mostrar' }}</button>
                             </div>
                         </div>
-
-                        <!-- Modelo de Análise -->
-                        <div class="space-y-1">
-                            <label class="block text-[11px] font-bold text-slate-600 uppercase">Modelo de Análise Textual</label>
-                            <input v-model="groqModel" placeholder="openai/gpt-oss-120b"
-                                   class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-mono font-medium outline-none focus:border-brand-500">
-                            <!-- Atalhos rápidos de modelos -->
-                            <div class="flex flex-wrap gap-1.5 pt-1">
-                                <button type="button" @click="groqModel = 'openai/gpt-oss-120b'"
-                                        :class="groqModel === 'openai/gpt-oss-120b' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
-                                        class="px-2 py-0.5 rounded-lg text-[10px] font-bold transition">
-                                    openai/gpt-oss-120b
-                                </button>
-                                <button type="button" @click="groqModel = 'gpt-oss-120b'"
-                                        :class="groqModel === 'gpt-oss-120b' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
-                                        class="px-2 py-0.5 rounded-lg text-[10px] font-bold transition">
-                                    gpt-oss-120b
-                                </button>
-                                <button type="button" @click="groqModel = 'qwen-2.5-32b'"
-                                        :class="groqModel === 'qwen-2.5-32b' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
-                                        class="px-2 py-0.5 rounded-lg text-[10px] font-bold transition">
-                                    qwen-2.5-32b
-                                </button>
-                                <button type="button" @click="groqModel = 'llama-3.3-70b-versatile'"
-                                        :class="groqModel === 'llama-3.3-70b-versatile' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
-                                        class="px-2 py-0.5 rounded-lg text-[10px] font-bold transition">
-                                    llama-3.3-70b
-                                </button>
+                        <div class="field">
+                            <label>Modelo</label>
+                            <input class="input" style="font-family:ui-monospace,monospace;font-size:13px" v-model="groqModel" placeholder="openai/gpt-oss-120b">
+                            <div class="chips" style="margin-top:8px">
+                                <button v-for="m in GROQ_MODELS" :key="m" class="chip" :class="{ on: groqModel === m }" @click="groqModel = m">{{ m }}</button>
                             </div>
                         </div>
-
-                        <!-- Opção Lançamento Automático -->
-                        <div class="pt-1">
-                            <label class="flex items-center gap-2 cursor-pointer select-none">
-                                <input v-model="groqAutoConfirm" type="checkbox" class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
-                                <span class="text-xs font-semibold text-slate-700">Lançar automaticamente após falar (contagem de 3s)</span>
-                            </label>
+                        <div class="row between">
+                            <span style="font-size:13px;font-weight:600;color:var(--ink-2)">Lançar automaticamente após 3 s</span>
+                            <button class="switch" :class="{ on: groqAutoConfirm }" role="switch" :aria-checked="groqAutoConfirm" @click="groqAutoConfirm = !groqAutoConfirm"></button>
                         </div>
-
-                        <!-- Botões de Ação Groq -->
-                        <div class="flex gap-2 pt-1">
-                            <button type="button" @click="saveGroqSettings" 
-                                    class="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-sm">
-                                Salvar Configurações de IA
-                            </button>
-                            <button type="button" @click="testGroqConnection" :disabled="groqTesting"
-                                    class="px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
-                                <svg v-if="groqTesting" class="animate-spin h-3.5 w-3.5 text-slate-600" viewBox="0 0 24 24" fill="none">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                                </svg>
-                                <span>{{ groqTesting ? 'Testando...' : 'Testar' }}</span>
-                            </button>
+                        <div class="row">
+                            <button class="btn primary grow" @click="saveGroqSettings">Salvar</button>
+                            <button class="btn" :disabled="groqTesting" @click="testGroqConnection">{{ groqTesting ? 'Testando…' : 'Testar' }}</button>
                         </div>
                     </div>
 
-                    <!-- Configuração da Chave PIX (Funcionalidade Nova) -->
-                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80 space-y-3">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <span class="p-1.5 rounded-lg bg-teal-50 text-teal-600 font-bold">⚡</span>
-                                Chave PIX para Cobrança
-                            </h2>
-                        </div>
-                        <p class="text-[11px] text-slate-500 leading-relaxed">
-                            Cadastre sua chave PIX para ser enviada automaticamente nos relatórios de cobrança do WhatsApp.
-                        </p>
-                        <div class="flex gap-2">
-                            <input v-model="userPixKey" placeholder="CPF, e-mail, telefone ou chave aleatória"
-                                   class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-medium outline-none focus:border-brand-500">
-                            <button @click="savePixKey" class="bg-slate-900 text-white px-4 rounded-xl text-xs font-bold hover:bg-slate-800 transition">
-                                Salvar
-                            </button>
-                        </div>
+                    <div class="section-title"><h2>Dados</h2></div>
+                    <div class="grid2">
+                        <button class="btn" @click="exportBackup"><svg class="i sm"><use href="#i-download"/></svg>Backup</button>
+                        <label class="btn" style="cursor:pointer"><svg class="i sm"><use href="#i-upload"/></svg>Restaurar<input type="file" accept=".json,application/json" hidden @change="importBackup"></label>
                     </div>
-
-                    <!-- Backup e Restauração de Dados -->
-                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80 space-y-3">
-                        <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <span class="p-1.5 rounded-lg bg-purple-50 text-purple-600 font-bold">💾</span>
-                            Backup e Segurança dos Dados
-                        </h2>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button @click="exportBackup" 
-                                    class="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-2xl font-bold text-xs shadow-sm flex flex-col items-center justify-center gap-1.5 transition">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                                <span>Exportar JSON</span>
-                            </button>
-
-                            <label class="bg-slate-100 hover:bg-slate-200 text-slate-700 p-3 rounded-2xl font-bold text-xs flex flex-col items-center justify-center gap-1.5 cursor-pointer transition">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                <span>Restaurar JSON</span>
-                                <input type="file" accept=".json" class="hidden" @change="importBackup">
-                            </label>
-                        </div>
-                    </div>
+                    <p class="hint" style="text-align:center;margin:0">Gestor de Faturas · v{{ APP_VERSION }}</p>
                 </div>
             </transition>
         </main>
 
-        <!-- ========================================== -->
-        <!-- BOTTOM NAVIGATION BAR (MODERNO E SEGURO)   -->
-        <!-- ========================================== -->
-        <nav class="bg-white/95 backdrop-blur-lg border-t border-slate-200/80 fixed bottom-0 w-full max-w-md mx-auto flex justify-around p-2 z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] safe-bottom">
-            
-            <!-- Botão 1: Lançar -->
-            <button @click="currentTab = 'lancamentos'" 
-                    :class="currentTab === 'lancamentos' ? 'text-brand-600' : 'text-slate-400 hover:text-slate-600'" 
-                    class="flex-1 flex flex-col items-center py-1.5 relative transition">
-                <div :class="currentTab === 'lancamentos' ? 'bg-brand-50 text-brand-600' : 'text-slate-400'"
-                     class="p-1.5 rounded-xl transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
-                </div>
-                <span class="text-[10px] font-extrabold mt-0.5">Lançar</span>
-            </button>
-
-            <!-- Botão 2: Faturas -->
-            <button @click="currentTab = 'relatorios'" 
-                    :class="currentTab === 'relatorios' ? 'text-brand-600' : 'text-slate-400 hover:text-slate-600'" 
-                    class="flex-1 flex flex-col items-center py-1.5 relative transition">
-                <div :class="currentTab === 'relatorios' ? 'bg-brand-50 text-brand-600' : 'text-slate-400'"
-                     class="p-1.5 rounded-xl transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                </div>
-                <span class="text-[10px] font-extrabold mt-0.5">Faturas</span>
-            </button>
-
-            <!-- Botão 3: Ajustes -->
-            <button @click="currentTab = 'config'" 
-                    :class="currentTab === 'config' ? 'text-brand-600' : 'text-slate-400 hover:text-slate-600'" 
-                    class="flex-1 flex flex-col items-center py-1.5 relative transition">
-                <div :class="currentTab === 'config' ? 'bg-brand-50 text-brand-600' : 'text-slate-400'"
-                     class="p-1.5 rounded-xl transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
-                </div>
-                <span class="text-[10px] font-extrabold mt-0.5">Ajustes</span>
-            </button>
+        <!-- ================= NAVEGAÇÃO ================= -->
+        <nav class="tabbar" aria-label="Navegação principal">
+            <button class="tab" :class="{ on: currentTab === 'home' }" @click="goTab('home')"><span class="pip"><svg class="i"><use href="#i-home"/></svg></span>Início</button>
+            <button class="tab" :class="{ on: currentTab === 'tx' }" @click="goTab('tx')"><span class="pip"><svg class="i"><use href="#i-list"/></svg></span>Lançamentos</button>
+            <button class="fab" @click="openNewTx()" aria-label="Novo lançamento"><svg class="i lg"><use href="#i-plus"/></svg></button>
+            <button class="tab" :class="{ on: currentTab === 'bills' }" @click="goTab('bills')"><span class="pip"><svg class="i"><use href="#i-receipt"/></svg></span>Faturas</button>
+            <button class="tab" :class="{ on: currentTab === 'settings' }" @click="goTab('settings')"><span class="pip"><svg class="i"><use href="#i-sliders"/></svg></span>Ajustes</button>
         </nav>
 
-        <!-- ========================================== -->
-        <!-- MODAL DO PERFIL DO USUÁRIO                 -->
-        <!-- ========================================== -->
-        <div v-if="profileModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
-            <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl border border-slate-200 space-y-4 animate-scaleUp">
-                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 class="text-sm font-extrabold text-slate-800">Conta & Sincronização</h3>
-                    <button @click="profileModalOpen = false" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
-                </div>
-
-                <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl">
-                    <div class="w-10 h-10 rounded-2xl bg-brand-600 text-white font-black text-sm flex items-center justify-center">
-                        {{ (user.email || 'U').charAt(0).toUpperCase() }}
-                    </div>
-                    <div class="min-w-0">
-                        <p class="text-xs font-bold text-slate-800 truncate">{{ user.email }}</p>
-                        <p class="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-0.5">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Conectado ao Firebase
-                        </p>
+        <!-- ================= FORMULÁRIO DE LANÇAMENTO ================= -->
+        <div v-if="txSheetOpen" class="overlay" @click.self="closeTxSheet">
+            <form class="sheet stack" role="dialog" aria-modal="true" @submit.prevent="saveTransaction">
+                <div class="grab"></div>
+                <div class="sheet-head" style="margin-bottom:0">
+                    <h3>{{ isEditingTx ? 'Editar lançamento' : 'Novo lançamento' }}</h3>
+                    <div class="row" style="gap:8px">
+                        <button v-if="!isEditingTx" type="button" class="icon-btn" @click="closeTxSheet(); openVoiceModal()" aria-label="Preencher por voz"><svg class="i"><use href="#i-mic"/></svg></button>
+                        <button type="button" class="icon-btn" @click="closeTxSheet" aria-label="Fechar"><svg class="i"><use href="#i-x"/></svg></button>
                     </div>
                 </div>
 
-                <div class="space-y-2">
-                    <button @click="exportBackup(); profileModalOpen = false" 
-                            class="w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center justify-between transition">
-                        <span>Fazer Backup dos Dados</span>
-                        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                    </button>
-                    
-                    <button @click="logout" 
-                            class="w-full py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold flex items-center justify-between transition">
-                        <span>Sair da Conta (Logout)</span>
-                        <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                    </button>
+                <div class="field">
+                    <label>Valor {{ formTx.type === 'installment' ? (formTx.amountType === 'total' ? '(total da compra)' : '(de cada parcela)') : (formTx.type === 'subscription' ? '(por mês)' : '') }}</label>
+                    <div class="prefix"><span>R$</span><input class="input money num" v-model.number="formTx.amount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0,00" required></div>
+                </div>
+
+                <div class="field">
+                    <label>Descrição</label>
+                    <input class="input" v-model="formTx.description" type="text" required maxlength="60" placeholder="Ex.: Supermercado, Netflix, Restaurante">
+                </div>
+
+                <div class="seg">
+                    <button type="button" :class="{ on: formTx.type === 'single' }" @click="formTx.type = 'single'">À vista</button>
+                    <button type="button" :class="{ on: formTx.type === 'installment' }" @click="formTx.type = 'installment'">Parcelada</button>
+                    <button type="button" :class="{ on: formTx.type === 'subscription' }" @click="formTx.type = 'subscription'">Mensal</button>
+                </div>
+
+                <div v-if="formTx.type === 'installment'" class="card flat stack" style="background:var(--brand-soft);border-color:transparent;gap:10px">
+                    <div class="row between">
+                        <span style="font-weight:700;font-size:13px">Parcelas</span>
+                        <input class="input" style="width:84px;text-align:center;font-weight:800" v-model.number="formTx.installments" type="number" inputmode="numeric" min="2" max="120">
+                    </div>
+                    <div class="chips" style="margin:0 -16px">
+                        <button v-for="n in [2, 3, 4, 6, 10, 12, 18, 24]" :key="n" type="button" class="chip" :class="{ on: formTx.installments === n }" @click="formTx.installments = n">{{ n }}x</button>
+                    </div>
+                    <div class="seg" style="background:var(--surface)">
+                        <button type="button" :class="{ on: formTx.amountType === 'total' }" @click="formTx.amountType = 'total'">Valor total</button>
+                        <button type="button" :class="{ on: formTx.amountType === 'installment' }" @click="formTx.amountType = 'installment'">Por parcela</button>
+                    </div>
+                    <div v-if="installmentPreview" class="small" style="font-weight:800;color:var(--brand);text-align:center">{{ installmentPreview }}</div>
+                </div>
+
+                <div v-if="formTx.type === 'subscription'" class="field">
+                    <label>Encerra em (opcional)</label>
+                    <input class="input" v-model="formTx.endMonth" type="month">
+                    <p class="hint" style="margin:6px 0 0">Sem data final, a cobrança continua se repetindo todo mês.</p>
+                </div>
+
+                <div class="field">
+                    <label>Categoria</label>
+                    <div class="chips">
+                        <button v-for="c in CATEGORIES" :key="c.id" type="button" class="chip" :class="{ on: formTx.category === c.id }" @click="formTx.category = c.id; categoryTouched = true">{{ c.icon }} {{ c.name }}</button>
+                    </div>
+                </div>
+
+                <div class="grid2">
+                    <div class="field">
+                        <label>Cartão</label>
+                        <select class="input" v-model="formTx.cardId" required>
+                            <option disabled value="">Selecione…</option>
+                            <option v-for="c in cards" :key="c.id" :value="c.id">{{ c.name }}</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Quem gastou</label>
+                        <select class="input" v-model="formTx.person" @change="handlePersonSelectChange" required>
+                            <option v-for="p in people" :key="p" :value="p">{{ p }}</option>
+                            <option value="__new__">+ Nova pessoa…</option>
+                        </select>
+                    </div>
+                </div>
+                <p v-if="!cards.length" class="err">Você ainda não tem cartões. <button type="button" class="link" @click="closeTxSheet(); goTab('settings'); openNewCard()">Cadastrar agora</button></p>
+
+                <div class="field">
+                    <label>Data da compra</label>
+                    <input class="input" v-model="formTx.date" type="date" required>
+                </div>
+
+                <p v-if="formError" class="err" role="alert">{{ formError }}</p>
+
+                <button class="btn primary block" type="submit">{{ isEditingTx ? 'Salvar alterações' : 'Salvar lançamento' }}</button>
+                <div v-if="isEditingTx" class="grid2">
+                    <button type="button" class="btn" @click="duplicateTransaction(isEditingTx)"><svg class="i sm"><use href="#i-copy"/></svg>Duplicar</button>
+                    <button type="button" class="btn danger" @click="deleteTransaction(isEditingTx)"><svg class="i sm"><use href="#i-trash"/></svg>Excluir</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ================= FORMULÁRIO DE CARTÃO ================= -->
+        <div v-if="cardSheetOpen" class="overlay" @click.self="cardSheetOpen = false">
+            <form class="sheet stack" role="dialog" aria-modal="true" @submit.prevent="saveCard">
+                <div class="grab"></div>
+                <div class="sheet-head" style="margin-bottom:0">
+                    <h3>{{ isEditingCard ? 'Editar cartão' : 'Novo cartão' }}</h3>
+                    <button type="button" class="icon-btn" @click="cardSheetOpen = false" aria-label="Fechar"><svg class="i"><use href="#i-x"/></svg></button>
+                </div>
+                <div class="field"><label>Nome / banco</label><input class="input" v-model="formCard.name" required maxlength="30" placeholder="Ex.: Nubank, Itaú, C6"></div>
+                <div class="grid2">
+                    <div class="field"><label>Dia do fechamento</label><input class="input" v-model.number="formCard.closingDay" type="number" inputmode="numeric" min="1" max="31" required></div>
+                    <div class="field"><label>Dia do vencimento</label><input class="input" v-model.number="formCard.dueDay" type="number" inputmode="numeric" min="1" max="31" required></div>
+                </div>
+                <div class="field">
+                    <label>Cor</label>
+                    <div class="color-picker">
+                        <button v-for="c in CARD_COLORS" :key="c" type="button" :class="{ on: formCard.color === c }" :style="{ background: c }" @click="formCard.color = c" :aria-label="'Cor ' + c"></button>
+                    </div>
+                </div>
+                <p v-if="cardError" class="err" role="alert">{{ cardError }}</p>
+                <button class="btn primary block" type="submit">{{ isEditingCard ? 'Salvar alterações' : 'Adicionar cartão' }}</button>
+            </form>
+        </div>
+
+        <!-- ================= CONTA ================= -->
+        <div v-if="profileModalOpen" class="overlay center" @click.self="profileModalOpen = false">
+            <div class="dialog stack" role="dialog" aria-modal="true">
+                <div class="row between"><h3>Conta</h3><button class="icon-btn" @click="profileModalOpen = false" aria-label="Fechar"><svg class="i"><use href="#i-x"/></svg></button></div>
+                <div class="row card flat" style="padding:12px">
+                    <span class="person-dot" style="background:var(--brand)">{{ initial(user.email) }}</span>
+                    <div style="min-width:0"><div class="truncate" style="font-weight:700">{{ user.email }}</div><div class="small muted" style="font-weight:600">{{ syncLabel }}</div></div>
+                </div>
+                <button class="btn block" @click="exportBackup(); profileModalOpen = false"><svg class="i sm"><use href="#i-download"/></svg>Fazer backup</button>
+                <button class="btn danger block" @click="logout"><svg class="i sm"><use href="#i-logout"/></svg>Sair da conta</button>
+            </div>
+        </div>
+
+        <!-- ================= CONFIRMAÇÃO / PROMPT ================= -->
+        <div v-if="confirmDialog.show" class="overlay center" @click.self="confirmDialog.show = false">
+            <div class="dialog stack" role="alertdialog" aria-modal="true">
+                <div><h3>{{ confirmDialog.title }}</h3><p class="hint" style="margin:6px 0 0;font-size:14px">{{ confirmDialog.message }}</p></div>
+                <div class="grid2">
+                    <button class="btn" @click="confirmDialog.show = false">Cancelar</button>
+                    <button class="btn" :class="confirmDialog.danger ? 'danger' : 'primary'" @click="confirmDialog.onConfirm">{{ confirmDialog.confirmLabel }}</button>
                 </div>
             </div>
         </div>
 
-        <!-- ========================================== -->
-        <!-- MODAL GENÉRICO DE CONFIRMAÇÃO              -->
-        <!-- ========================================== -->
-        <div v-if="confirmDialog.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
-            <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl border border-slate-200 space-y-4">
-                <div class="flex items-center gap-3">
-                    <span class="p-2.5 rounded-2xl bg-rose-50 text-rose-600 text-xl font-bold">⚠️</span>
-                    <div>
-                        <h4 class="text-sm font-extrabold text-slate-800">{{ confirmDialog.title }}</h4>
-                        <p class="text-xs text-slate-500 mt-0.5">{{ confirmDialog.message }}</p>
-                    </div>
+        <div v-if="promptDialog.show" class="overlay center" @click.self="promptDialog.show = false">
+            <form class="dialog stack" @submit.prevent="promptDialog.onConfirm">
+                <div><h3>{{ promptDialog.title }}</h3><p class="hint" style="margin:6px 0 0;font-size:14px">{{ promptDialog.message }}</p></div>
+                <input class="input" v-model="promptDialog.value" autofocus maxlength="40">
+                <div class="grid2">
+                    <button type="button" class="btn" @click="promptDialog.show = false">Cancelar</button>
+                    <button type="submit" class="btn primary">Salvar</button>
                 </div>
-                <div class="grid grid-cols-2 gap-2 pt-2">
-                    <button @click="confirmDialog.show = false" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
-                        Cancelar
-                    </button>
-                    <button @click="confirmDialog.onConfirm" class="py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition">
-                        Confirmar
-                    </button>
-                </div>
-            </div>
+            </form>
         </div>
 
-        <!-- ========================================== -->
-        <!-- MODAL DE INPUT (RENOMEAR / NOVA PESSOA)    -->
-        <!-- ========================================== -->
-        <div v-if="promptDialog.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
-            <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl border border-slate-200 space-y-4">
-                <div>
-                    <h4 class="text-sm font-extrabold text-slate-800">{{ promptDialog.title }}</h4>
-                    <p class="text-xs text-slate-500 mt-0.5">{{ promptDialog.message }}</p>
-                </div>
-                <input v-model="promptDialog.value" @keyup.enter="promptDialog.onConfirm" autofocus
-                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold outline-none focus:border-brand-500">
-                <div class="grid grid-cols-2 gap-2 pt-1">
-                    <button @click="promptDialog.show = false" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
-                        Cancelar
-                    </button>
-                    <button @click="promptDialog.onConfirm" class="py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold transition">
-                        Salvar
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========================================== -->
-        <!-- MODAL DE LANÇAMENTO POR VOZ COM IA (GROQ) -->
-        <!-- ========================================== -->
-        <div v-if="voiceModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-            <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl border border-slate-200 space-y-4 animate-scaleUp overflow-hidden relative">
-                
-                <!-- Header do Modal -->
-                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <div class="flex items-center gap-2">
-                        <span class="p-1.5 rounded-xl bg-purple-100 text-purple-600 text-sm font-bold">🎙️</span>
-                        <div>
-                            <h3 class="text-sm font-extrabold text-slate-800 leading-tight">Lançar por Voz com IA</h3>
-                            <p class="text-[10px] text-slate-400 font-medium">Whisper V3 Large + {{ groqModel }}</p>
-                        </div>
-                    </div>
-                    <button @click="closeVoiceModal" class="text-slate-400 hover:text-slate-600 text-lg font-bold p-1">✕</button>
+        <!-- ================= VOZ ================= -->
+        <div v-if="voiceModalOpen" class="overlay" @click.self="closeVoiceModal">
+            <div class="sheet stack" role="dialog" aria-modal="true" style="gap:16px">
+                <div class="grab"></div>
+                <div class="sheet-head" style="margin-bottom:0">
+                    <h3 class="row"><svg class="i" style="color:var(--brand)"><use href="#i-sparkle"/></svg>Lançar por voz</h3>
+                    <button class="icon-btn" @click="closeVoiceModal" aria-label="Fechar"><svg class="i"><use href="#i-x"/></svg></button>
                 </div>
 
-                <!-- ESTADO 1: PRECISA DA CHAVE API (need_key) -->
-                <div v-if="voiceState === 'need_key'" class="space-y-3.5 py-1">
-                    <div class="p-3 bg-purple-50/80 border border-purple-100 rounded-2xl text-center space-y-1">
-                        <span class="text-2xl block">🔑</span>
-                        <p class="text-xs font-bold text-purple-950">Chave da Groq Cloud Necessária</p>
-                        <p class="text-[11px] text-purple-700 leading-tight">
-                            Para usar o Whisper V3 Large e a IA para lançamentos automáticos, informe sua chave gratuita da Groq.
-                        </p>
+                <template v-if="voiceState === 'need_key'">
+                    <div class="card flat" style="background:var(--brand-soft);border-color:transparent;text-align:center">
+                        <strong>Chave da Groq necessária</strong>
+                        <p class="hint" style="margin:4px 0 0">É grátis e leva um minuto para criar. Ela fica salva só na sua conta.</p>
                     </div>
+                    <div class="field">
+                        <label>Chave de API <a class="link" style="float:right;text-transform:none;letter-spacing:0" href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com ↗</a></label>
+                        <input class="input" v-model="groqApiKey" type="password" placeholder="gsk_…" autocomplete="off">
+                    </div>
+                    <button class="btn primary block" :disabled="!groqApiKey.trim()" @click="saveGroqSettings">Salvar e continuar</button>
+                </template>
 
-                    <div class="space-y-1">
-                        <div class="flex justify-between items-center text-[10px]">
-                            <label class="font-bold text-slate-600 uppercase">Chave de API</label>
-                            <a href="https://console.groq.com/keys" target="_blank" class="text-brand-600 font-bold hover:underline">
-                                Obter no console.groq.com ↗
-                            </a>
+                <template v-else-if="voiceState === 'ready'">
+                    <button class="mic" @click="startVoiceRecording" aria-label="Começar a gravar"><svg class="i lg" style="width:34px;height:34px"><use href="#i-mic"/></svg></button>
+                    <div style="text-align:center"><strong style="font-size:16px">Toque para falar</strong><p class="hint" style="margin:4px 0 0">Diga o que comprou, o valor, as parcelas, quem gastou e o cartão.</p></div>
+                    <div class="stack" style="gap:8px">
+                        <div class="quote">“Almoço de 45 reais e 50 centavos para o Carlos no Nubank hoje”</div>
+                        <div class="quote">“Geladeira de 2400 reais em 10 vezes no Inter”</div>
+                    </div>
+                </template>
+
+                <template v-else-if="voiceState === 'recording'">
+                    <div class="mic rec"><svg class="i lg" style="width:34px;height:34px"><use href="#i-mic"/></svg></div>
+                    <div style="text-align:center"><span class="pill bad num" style="font-size:13px">● {{ formatDuration(voiceRecordingDuration) }}</span><p class="hint" style="margin:8px 0 0">Ouvindo… fale com clareza.</p></div>
+                    <div class="grid2">
+                        <button class="btn" @click="cancelVoiceRecording">Cancelar</button>
+                        <button class="btn primary" @click="stopVoiceRecording"><svg class="i sm"><use href="#i-check"/></svg>Concluir</button>
+                    </div>
+                </template>
+
+                <template v-else-if="voiceState === 'processing'">
+                    <div style="text-align:center;padding:18px 0">
+                        <svg class="i spin" style="width:44px;height:44px;color:var(--brand)" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.2-8.55"/></svg>
+                        <p style="font-weight:700;margin:12px 0 0">{{ voiceProcessingStep }}</p>
+                    </div>
+                </template>
+
+                <template v-else-if="voiceState === 'review' && voiceParsedData">
+                    <div class="quote">“{{ voiceTranscription }}”</div>
+                    <div class="card flat stack" style="gap:10px">
+                        <div class="row between">
+                            <span class="row" style="font-weight:800"><span class="cat-ico" :style="{ background: getCategory(voiceParsedData.category).color + '22' }">{{ getCategory(voiceParsedData.category).icon }}</span>{{ voiceParsedData.description }}</span>
+                            <span class="num" style="font-weight:800;font-size:18px">{{ formatMoney(voiceParsedData.amount) }}</span>
                         </div>
-                        <input v-model="groqApiKey" type="password" placeholder="gsk_..."
-                               class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono font-semibold outline-none focus:border-purple-500">
-                    </div>
-
-                    <button @click="saveGroqSettings" :disabled="!groqApiKey.trim()"
-                            class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-bold transition disabled:opacity-40">
-                        Salvar e Continuar
-                    </button>
-                </div>
-
-                <!-- ESTADO 2: PRONTO PARA FALAR (ready) -->
-                <div v-else-if="voiceState === 'ready'" class="space-y-4 py-2 text-center">
-                    <div class="relative w-28 h-28 mx-auto flex items-center justify-center">
-                        <button @click="startVoiceRecording" 
-                                class="w-20 h-20 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-xl shadow-purple-600/30 flex items-center justify-center text-3xl active:scale-95 transition">
-                            🎙️
-                        </button>
-                    </div>
-
-                    <div class="space-y-1">
-                        <p class="text-sm font-black text-slate-800">Toque no microfone para falar</p>
-                        <p class="text-[11px] text-slate-500 max-w-xs mx-auto">
-                            Diga o que comprou, valor, parcelas, pessoa e cartão.
-                        </p>
-                    </div>
-
-                    <!-- Dicas de Frases -->
-                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200/70 text-left space-y-1.5">
-                        <p class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Exemplos de comando:</p>
-                        <p class="text-[11px] text-slate-700 italic leading-snug">"Comprei um almoço de 45 reais e 50 centavos para o Carlos no Nubank hoje"</p>
-                        <p class="text-[11px] text-slate-700 italic leading-snug">"Geladeira de 2400 reais em 10 vezes no Inter para Eu"</p>
-                    </div>
-                </div>
-
-                <!-- ESTADO 3: GRAVANDO (recording) -->
-                <div v-else-if="voiceState === 'recording'" class="space-y-5 py-3 text-center">
-                    <!-- Microfone pulsando e timer -->
-                    <div class="relative w-32 h-32 mx-auto flex items-center justify-center">
-                        <div class="absolute inset-0 rounded-full bg-rose-500/20 pulse-ring-anim"></div>
-                        <div class="absolute w-24 h-24 rounded-full bg-rose-500/30 animate-pulse"></div>
-                        <div class="relative w-20 h-20 rounded-full bg-gradient-to-tr from-rose-600 to-red-500 text-white shadow-xl shadow-rose-600/40 flex items-center justify-center text-2xl">
-                            🎙️
+                        <div class="grid2 small" style="font-weight:700">
+                            <div><div class="lbl-up" style="margin:0">Pessoa</div>{{ voiceParsedData.person }}</div>
+                            <div><div class="lbl-up" style="margin:0">Cartão</div>{{ getCardName(voiceParsedData.cardId) }}</div>
+                            <div><div class="lbl-up" style="margin:0">Condição</div>{{ voicePreviewCondition }}</div>
+                            <div><div class="lbl-up" style="margin:0">Data</div>{{ formatDate(voiceParsedData.date) }}</div>
                         </div>
                     </div>
-
-                    <div class="space-y-1">
-                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-xs font-bold border border-rose-200/60">
-                            <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-                            <span>Ouvindo... {{ formatDuration(voiceRecordingDuration) }}</span>
-                        </div>
-                        <p class="text-xs text-slate-500 mt-1">Fale com clareza os detalhes da compra</p>
+                    <div v-if="groqAutoConfirm && voiceAutoConfirmTimer > 0" class="stack" style="gap:6px">
+                        <div class="row between small" style="font-weight:700"><span>Lançando em {{ voiceAutoConfirmTimer }}s…</span><button class="link" @click="cancelAutoConfirm">Pausar</button></div>
+                        <div class="meter"><div style="background:var(--brand);transition:width 1s linear" :style="{ width: (voiceAutoConfirmTimer / 3 * 100) + '%' }"></div></div>
                     </div>
-
-                    <div class="grid grid-cols-2 gap-2 pt-1">
-                        <button @click="cancelVoiceRecording" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
-                            Cancelar
-                        </button>
-                        <button @click="stopVoiceRecording" class="py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-rose-500/20">
-                            <span>Concluir</span>
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                        </button>
+                    <div class="grid2">
+                        <button class="btn" @click="editInFormFromVoice">Revisar</button>
+                        <button class="btn ok" @click="applyVoiceTransaction"><svg class="i sm"><use href="#i-check"/></svg>Confirmar</button>
                     </div>
-                </div>
+                </template>
 
-                <!-- ESTADO 4: PROCESSANDO (processing) -->
-                <div v-else-if="voiceState === 'processing'" class="space-y-4 py-6 text-center">
-                    <div class="relative w-20 h-20 mx-auto flex items-center justify-center">
-                        <svg class="animate-spin h-14 w-14 text-purple-600" viewBox="0 0 24 24" fill="none">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                        </svg>
-                        <span class="absolute text-xl">⚡</span>
+                <template v-else-if="voiceState === 'error'">
+                    <div class="card flat" style="background:var(--bad-soft);border-color:transparent;text-align:center">
+                        <strong style="color:var(--bad)">Não foi possível concluir</strong>
+                        <p class="hint" style="margin:4px 0 0;color:var(--bad)">{{ voiceErrorMessage }}</p>
                     </div>
-
-                    <div class="space-y-1">
-                        <p class="text-xs font-bold text-purple-900">{{ voiceProcessingStep }}</p>
-                        <p class="text-[11px] text-slate-400">Processamento ultrarrápido na Groq Cloud</p>
+                    <div class="grid2">
+                        <button class="btn" @click="voiceState = 'need_key'">Verificar chave</button>
+                        <button class="btn primary" @click="voiceState = 'ready'">Tentar de novo</button>
                     </div>
-                </div>
-
-                <!-- ESTADO 5: REVISÃO / AUTO-CONFIRMAÇÃO (review) -->
-                <div v-else-if="voiceState === 'review' && voiceParsedData" class="space-y-3.5 py-1">
-                    <!-- Transcrição Capturada -->
-                    <div class="p-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-left">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Você disse:</p>
-                        <p class="text-xs text-slate-700 italic mt-0.5">"{{ voiceTranscription }}"</p>
-                    </div>
-
-                    <!-- Card com Dados Estruturados -->
-                    <div class="p-3.5 bg-gradient-to-br from-purple-50/50 to-brand-50/50 border border-purple-200/70 rounded-2xl space-y-2.5">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[11px] font-bold text-purple-900 uppercase">Compra Identificada</span>
-                            <span class="text-sm font-black text-slate-900">{{ formatMoney(voiceParsedData.amount) }}</span>
-                        </div>
-
-                        <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                            <span>🛍️</span>
-                            <span>{{ voiceParsedData.description }}</span>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-purple-100">
-                            <div>
-                                <span class="text-slate-400 block text-[9px] font-bold uppercase">Pessoa</span>
-                                <span class="font-extrabold text-brand-600">{{ voiceParsedData.person }}</span>
-                            </div>
-                            <div>
-                                <span class="text-slate-400 block text-[9px] font-bold uppercase">Cartão</span>
-                                <span class="font-bold text-slate-700">{{ getCardName(voiceParsedData.cardId) }}</span>
-                            </div>
-                            <div>
-                                <span class="text-slate-400 block text-[9px] font-bold uppercase">Condição</span>
-                                <span class="font-bold text-purple-700">
-                                    {{ voiceParsedData.type === 'installment' ? `${voiceParsedData.installments}x de ${formatMoney(voiceParsedData.amount / voiceParsedData.installments)}` : (voiceParsedData.type === 'subscription' ? 'Mensal' : 'À Vista') }}
-                                </span>
-                            </div>
-                            <div>
-                                <span class="text-slate-400 block text-[9px] font-bold uppercase">Data</span>
-                                <span class="font-bold text-slate-700">{{ formatDate(voiceParsedData.date) }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Indicador de Auto-Confirm ou Ações -->
-                    <div v-if="groqAutoConfirm && voiceAutoConfirmTimer > 0" class="space-y-1.5">
-                        <div class="flex items-center justify-between text-[11px] font-bold text-purple-900">
-                            <span>Lançando automaticamente em {{ voiceAutoConfirmTimer }}s...</span>
-                            <button @click="cancelAutoConfirm" class="text-rose-600 hover:underline">Pausar</button>
-                        </div>
-                        <div class="w-full bg-purple-100 h-1.5 rounded-full overflow-hidden">
-                            <div class="bg-purple-600 h-full transition-all duration-1000" :style="{ width: (voiceAutoConfirmTimer / 3 * 100) + '%' }"></div>
-                        </div>
-                    </div>
-
-                    <!-- Botões de Ação -->
-                    <div class="grid grid-cols-2 gap-2 pt-1">
-                        <button @click="editInFormFromVoice" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
-                            Revisar no Form
-                        </button>
-                        <button @click="applyVoiceTransaction" class="py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-md shadow-emerald-600/20">
-                            <span>Confirmar Agora</span>
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- ESTADO 6: ERRO (error) -->
-                <div v-else-if="voiceState === 'error'" class="space-y-4 py-2 text-center">
-                    <div class="p-3 bg-rose-50 border border-rose-200 rounded-2xl space-y-1">
-                        <span class="text-2xl block">⚠️</span>
-                        <p class="text-xs font-bold text-rose-900">Não foi possível concluir</p>
-                        <p class="text-[11px] text-rose-700 leading-snug">{{ voiceErrorMessage }}</p>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-2">
-                        <button @click="voiceState = 'need_key'" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
-                            Verificar Chave
-                        </button>
-                        <button @click="voiceState = 'ready'" class="py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition">
-                            Tentar de Novo
-                        </button>
-                    </div>
-                </div>
-
+                </template>
             </div>
         </div>
 
     </template>
+
+    <!-- ================= AVISO ================= -->
+    <transition name="toast">
+        <div v-if="toast.show" class="toast" :class="toast.type" role="status">
+            <span>{{ toast.message }}</span>
+            <button v-if="toast.action" @click="runToastAction">{{ toast.action.label }}</button>
+        </div>
+    </transition>
 </div>
 
-<!-- ========================================== -->
-<!-- SCRIPTS: FIREBASE, PERSISTÊNCIA & VUE LOGIC-->
-<!-- ========================================== -->
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-    import { getFirestore, doc, onSnapshot, setDoc, enableMultiTabIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyCXao0he_pS1dquJPGRbkjhFeeWPkQqxsw",
-        authDomain: "gestorfaturas-4e199.firebaseapp.com",
-        projectId: "gestorfaturas-4e199",
-        storageBucket: "gestorfaturas-4e199.firebasestorage.app",
-        messagingSenderId: "779508869408",
-        appId: "1:779508869408:web:c1883d5d22832f1c254f45"
-    };
-
-    const fbApp = initializeApp(firebaseConfig);
-    const auth = getAuth(fbApp);
-    const db = getFirestore(fbApp);
-
-    enableMultiTabIndexedDbPersistence(db).catch(() => {});
-
-    const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
-    const COLOR_PALETTE = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2', '#4f46e5', '#db2777', '#ea580c', '#16a34a', '#9333ea'];
-
-    createApp({
-        setup() {
-            const user = ref(null);
-            const loading = ref(false);
-            const authMode = ref('login');
-            const authForm = reactive({ email: '', password: '' });
-            const syncStatus = ref('idle');
-            const currentTab = ref('lancamentos');
-            const reportMonth = ref(new Date().toISOString().slice(0, 7));
-            const searchQuery = ref('');
-            const profileModalOpen = ref(false);
-            const userPixKey = ref('');
-
-            // IA & Lançamento por Voz (Groq Cloud)
-            const groqApiKey = ref(localStorage.getItem('groq_api_key') || '');
-            const groqModel = ref(localStorage.getItem('groq_model') || 'openai/gpt-oss-120b');
-            const groqAutoConfirm = ref(localStorage.getItem('groq_auto_confirm') !== 'false');
-            const showGroqKey = ref(false);
-            const groqTesting = ref(false);
-
-            const voiceModalOpen = ref(false);
-            const voiceState = ref('ready'); // 'ready' | 'need_key' | 'recording' | 'processing' | 'review' | 'error'
-            const voiceProcessingStep = ref('');
-            const voiceRecordingDuration = ref(0);
-            const voiceTranscription = ref('');
-            const voiceParsedData = ref(null);
-            const voiceAutoConfirmTimer = ref(3);
-            const voiceErrorMessage = ref('');
-
-            // Estrutura de dados principal
-            const cards = ref([]);
-            const people = ref(['Eu']);
-            const transactions = ref([]);
-            const payments = ref({});
-            const personColors = ref({'Eu': '#2563eb'});
-
-            // Formulários
-            const formCard = reactive({ name: '', closingDay: 1, dueDay: 10 });
-            const formTx = reactive({ 
-                description: '', 
-                amount: null, 
-                amountType: 'total', 
-                date: new Date().toISOString().slice(0, 10), 
-                cardId: '', 
-                person: 'Eu', 
-                type: 'single', 
-                installments: 2 
-            });
-            const newPerson = ref('');
-            
-            const isEditingTx = ref(null);
-            const isEditingCard = ref(null);
-
-            // Sistema de Toast e Modais Elegantes
-            const toast = reactive({ show: false, message: '', type: 'info', icon: 'ℹ️' });
-            let toastTimer = null;
-            const showToast = (message, type = 'info') => {
-                clearTimeout(toastTimer);
-                toast.message = message;
-                toast.type = type;
-                toast.icon = type === 'success' ? '✅' : (type === 'error' ? '❌' : 'ℹ️');
-                toast.show = true;
-                toastTimer = setTimeout(() => { toast.show = false; }, 3000);
-            };
-
-            const confirmDialog = reactive({ show: false, title: '', message: '', onConfirm: null });
-            const promptDialog = reactive({ show: false, title: '', message: '', value: '', onConfirm: null });
-
-            // Sincronização com Cloud Firestore
-            let unsubscribeStore = null;
-            const startSync = (uid) => {
-                const docRef = doc(db, 'artifacts', 'gestor-faturas', 'users', uid, 'appData', 'main');
-                unsubscribeStore = onSnapshot(docRef, (snap) => {
-                    if (snap.exists()) {
-                        const data = snap.data();
-                        cards.value = data.cards || [];
-                        people.value = data.people || ['Eu'];
-                        transactions.value = data.transactions || [];
-                        payments.value = data.payments || {};
-                        personColors.value = data.personColors || {'Eu': '#2563eb'};
-                        userPixKey.value = data.pixKey || '';
-                        if (data.groqApiKey && !groqApiKey.value) groqApiKey.value = data.groqApiKey;
-                        if (data.groqModel) groqModel.value = data.groqModel;
-                        if (data.groqAutoConfirm !== undefined) groqAutoConfirm.value = data.groqAutoConfirm;
-                        if (!formTx.cardId && cards.value.length > 0) formTx.cardId = cards.value[0].id;
-                    }
-                });
-            };
-
-            const pushToCloud = async () => {
-                if (!user.value) return;
-                syncStatus.value = 'syncing';
-                try {
-                    const docRef = doc(db, 'artifacts', 'gestor-faturas', 'users', user.value.uid, 'appData', 'main');
-                    await setDoc(docRef, {
-                        cards: cards.value, 
-                        people: people.value, 
-                        transactions: transactions.value,
-                        payments: payments.value, 
-                        personColors: personColors.value, 
-                        pixKey: userPixKey.value,
-                        groqApiKey: groqApiKey.value,
-                        groqModel: groqModel.value,
-                        groqAutoConfirm: groqAutoConfirm.value,
-                        updatedAt: new Date().toISOString()
-                    });
-                } catch (e) { 
-                    console.error("Erro ao sincronizar com nuvem:", e); 
-                }
-                syncStatus.value = 'idle';
-            };
-
-            let timer;
-            watch([cards, people, transactions, payments, personColors, userPixKey, groqApiKey, groqModel, groqAutoConfirm], () => {
-                clearTimeout(timer);
-                timer = setTimeout(pushToCloud, 1800);
-            }, { deep: true });
-
-            // Autenticação
-            const handleAuth = async () => {
-                loading.value = true;
-                try {
-                    if (authMode.value === 'login') {
-                        await signInWithEmailAndPassword(auth, authForm.email, authForm.password);
-                        showToast("Bem-vindo de volta!", "success");
-                    } else {
-                        await createUserWithEmailAndPassword(auth, authForm.email, authForm.password);
-                        showToast("Conta criada com sucesso!", "success");
-                    }
-                } catch (e) { 
-                    showToast("Erro: " + (e.message.includes('auth/') ? 'Verifique suas credenciais' : e.message), "error"); 
-                }
-                loading.value = false;
-            };
-
-            const logout = () => {
-                signOut(auth);
-                profileModalOpen.value = false;
-                showToast("Sessão encerrada.", "info");
-            };
-
-            onMounted(() => {
-                onAuthStateChanged(auth, (u) => {
-                    user.value = u;
-                    if (u) startSync(u.uid);
-                    else if (unsubscribeStore) unsubscribeStore();
-                });
-            });
-
-            // Cores e Helpers de Formatação
-            const getPersonColor = (name) => {
-                if (!personColors.value[name]) {
-                    personColors.value[name] = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
-                }
-                return personColors.value[name];
-            };
-
-            const formatMoney = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
-
-            const formatDate = (dStr) => {
-                if (!dStr) return '';
-                const [y, m, d] = dStr.split('-');
-                return `${d}/${m}`;
-            };
-
-            const formatMonthLabel = (yyyyMM) => {
-                if (!yyyyMM) return '';
-                const [y, m] = yyyyMM.split('-').map(Number);
-                const date = new Date(y, m - 1, 1);
-                return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-            };
-
-            const getCardName = (id) => cards.value.find(c => c.id === id)?.name || 'Cartão';
-
-            // Navegação Rápida de Meses
-            const navigateMonth = (delta) => {
-                const [y, m] = reportMonth.value.split('-').map(Number);
-                let targetM = m + delta;
-                let targetY = y;
-                if (targetM > 12) { targetM = 1; targetY++; }
-                else if (targetM < 1) { targetM = 12; targetY--; }
-                reportMonth.value = `${targetY}-${String(targetM).padStart(2, '0')}`;
-            };
-
-            // Cálculo dos Ciclos e Projeção das Faturas
-            const getInvoiceMonth = (pDate, cDay, dDay) => {
-                const [y, m, d] = pDate.split('-').map(Number);
-                let targetM = m; let targetY = y;
-                if (d >= (cDay || 31)) targetM++;
-                if ((dDay || 10) <= (cDay || 31)) targetM++;
-                while (targetM > 12) { targetM -= 12; targetY++; }
-                return `${targetY}-${String(targetM).padStart(2, '0')}`;
-            };
-
-            const addMonths = (yyyyMM, n) => {
-                const [y, m] = yyyyMM.split('-').map(Number);
-                let tM = m + n; let tY = y;
-                while (tM > 12) { tM -= 12; tY++; }
-                return `${tY}-${String(tM).padStart(2, '0')}`;
-            };
-
-            const projectedInvoices = computed(() => {
-                const invs = {};
-                
-                // Distribui os lançamentos nos meses
-                transactions.value.forEach(tx => {
-                    const card = cards.value.find(c => c.id === tx.cardId);
-                    if (!card) return;
-                    const startMonth = getInvoiceMonth(tx.date, card.closingDay, card.dueDay);
-                    const reps = tx.type === 'subscription' ? 24 : (tx.type === 'installment' ? tx.installments : 1);
-                    const val = tx.type === 'installment' ? tx.amount / tx.installments : tx.amount;
-                    
-                    for (let i = 0; i < reps; i++) {
-                        const m = addMonths(startMonth, i);
-                        if (!invs[m]) invs[m] = { total: 0, byPerson: {} };
-                        if (!invs[m].byPerson[tx.person]) invs[m].byPerson[tx.person] = { total: 0, items: [] };
-                        invs[m].total += val; 
-                        invs[m].byPerson[tx.person].total += val;
-                        invs[m].byPerson[tx.person].items.push({ 
-                            id: tx.id, 
-                            desc: tx.description, 
-                            amount: val, 
-                            parcelaInfo: tx.type === 'installment' ? `(${i+1}/${tx.installments})` : '',
-                            isDebt: false
-                        });
-                    }
-                });
-
-                // Rolagem de Dívidas (Saldo Devedor Acumulado)
-                const curMonthStr = new Date().toISOString().slice(0, 7);
-                const maxRolloverMonth = addMonths(curMonthStr, 2); 
-                
-                let sortedMonths = Object.keys(invs).sort();
-                for (let i = 0; i < sortedMonths.length; i++) {
-                    const month = sortedMonths[i];
-                    if (month >= maxRolloverMonth) continue;
-                    
-                    const nextMonth = addMonths(month, 1);
-                    
-                    for (const person in invs[month].byPerson) {
-                        const personData = invs[month].byPerson[person];
-                        const isPaid = payments.value[month]?.[person];
-                        
-                        if (!isPaid && personData.total > 0) {
-                            if (!invs[nextMonth]) invs[nextMonth] = { total: 0, byPerson: {} };
-                            if (!invs[nextMonth].byPerson[person]) invs[nextMonth].byPerson[person] = { total: 0, items: [] };
-                            
-                            const debtItem = {
-                                id: `debt-${month}-${person}`,
-                                desc: `⚠️ Saldo devedor de ${month.split('-')[1]}/${month.split('-')[0]}`,
-                                amount: personData.total,
-                                isDebt: true
-                            };
-                            
-                            invs[nextMonth].byPerson[person].items.unshift(debtItem);
-                            invs[nextMonth].byPerson[person].total += personData.total;
-                            invs[nextMonth].total += personData.total;
-                            
-                            if (!sortedMonths.includes(nextMonth)) {
-                                sortedMonths.push(nextMonth);
-                                sortedMonths.sort();
-                            }
-                        }
-                    }
-                }
-                
-                return invs;
-            });
-
-            const currentInvoiceData = computed(() => projectedInvoices.value[reportMonth.value] || null);
-
-            // Estatísticas do Mês Atual
-            const reportStats = computed(() => {
-                if (!currentInvoiceData.value) return { paidCount: 0, totalCount: 0, percentPaid: 0 };
-                const byPerson = currentInvoiceData.value.byPerson;
-                const peopleList = Object.keys(byPerson);
-                const paidCount = peopleList.filter(p => payments.value[reportMonth.value]?.[p]).length;
-                const totalCount = peopleList.length;
-                const percentPaid = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
-                return { paidCount, totalCount, percentPaid };
-            });
-
-            // Filtro de Transações com Busca
-            const filteredTransactions = computed(() => {
-                let list = [...transactions.value].reverse();
-                if (searchQuery.value.trim()) {
-                    const q = searchQuery.value.toLowerCase();
-                    list = list.filter(t => 
-                        (t.description || '').toLowerCase().includes(q) ||
-                        (t.person || '').toLowerCase().includes(q) ||
-                        getCardName(t.cardId).toLowerCase().includes(q)
-                    );
-                }
-                return list;
-            });
-
-            // Ações de Lançamentos
-            const addTransaction = () => {
-                const finalAmt = (formTx.type === 'installment' && formTx.amountType === 'installment') 
-                    ? formTx.amount * formTx.installments 
-                    : formTx.amount;
-
-                if (isEditingTx.value) {
-                    const idx = transactions.value.findIndex(t => t.id === isEditingTx.value);
-                    if (idx !== -1) transactions.value[idx] = { ...formTx, id: isEditingTx.value, amount: finalAmt };
-                    cancelEditTx();
-                    showToast("Lançamento atualizado!", "success");
-                } else {
-                    transactions.value.push({ ...formTx, id: Date.now().toString(), amount: finalAmt });
-                    formTx.description = ''; 
-                    formTx.amount = null;
-                    showToast("Lançamento adicionado com sucesso!", "success");
-                }
-            };
-
-            const editTransaction = (tx) => { 
-                isEditingTx.value = tx.id; 
-                Object.assign(formTx, tx); 
-                currentTab.value = 'lancamentos'; 
-                window.scrollTo({ top: 0, behavior: 'smooth' }); 
-            };
-
-            const editTransactionById = (id) => { 
-                const tx = transactions.value.find(t => t.id === id); 
-                if (tx) editTransaction(tx); 
-            };
-
-            const cancelEditTx = () => { 
-                isEditingTx.value = null; 
-                formTx.description = ''; 
-                formTx.amount = null; 
-            };
-
-            const confirmDeleteTx = (id) => {
-                confirmDialog.title = "Excluir Lançamento";
-                confirmDialog.message = "Tem certeza que deseja remover esta despesa permanentemente?";
-                confirmDialog.onConfirm = () => {
-                    transactions.value = transactions.value.filter(t => t.id !== id);
-                    confirmDialog.show = false;
-                    showToast("Lançamento excluído.", "info");
-                };
-                confirmDialog.show = true;
-            };
-
-            // Ações de Cartões
-            const addCard = () => {
-                if (isEditingCard.value) {
-                    const idx = cards.value.findIndex(c => c.id === isEditingCard.value);
-                    if (idx !== -1) cards.value[idx] = { ...formCard, id: isEditingCard.value };
-                    cancelEditCard();
-                    showToast("Cartão atualizado!", "success");
-                } else {
-                    cards.value.push({ ...formCard, id: Date.now().toString() });
-                    formCard.name = '';
-                    showToast("Novo cartão cadastrado!", "success");
-                }
-            };
-
-            const editCard = (card) => { 
-                isEditingCard.value = card.id; 
-                Object.assign(formCard, card); 
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            };
-
-            const cancelEditCard = () => { 
-                isEditingCard.value = null; 
-                formCard.name = ''; 
-            };
-
-            const confirmDeleteCard = (id) => {
-                confirmDialog.title = "Excluir Cartão";
-                confirmDialog.message = "A exclusão do cartão afetará os lançamentos vinculados a ele. Deseja prosseguir?";
-                confirmDialog.onConfirm = () => {
-                    cards.value = cards.value.filter(c => c.id !== id);
-                    confirmDialog.show = false;
-                    showToast("Cartão removido.", "info");
-                };
-                confirmDialog.show = true;
-            };
-
-            // Ações de Pessoas
-            const addPerson = () => { 
-                const trimmed = (newPerson.value || '').trim();
-                if (trimmed && !people.value.includes(trimmed)) { 
-                    people.value.push(trimmed); 
-                    newPerson.value = ''; 
-                    showToast(`${trimmed} adicionado(a)!`, "success");
-                } 
-            };
-
-            const openEditPersonModal = (oldName) => {
-                promptDialog.title = "Renomear Pessoa";
-                promptDialog.message = `Informe o novo nome para ${oldName}:`;
-                promptDialog.value = oldName;
-                promptDialog.onConfirm = () => {
-                    const n = (promptDialog.value || '').trim();
-                    if (n && n !== oldName) {
-                        if (people.value.includes(n)) { 
-                            showToast("Este nome já existe!", "error"); 
-                            return; 
-                        }
-                        const idx = people.value.indexOf(oldName);
-                        people.value[idx] = n;
-                        personColors.value[n] = personColors.value[oldName];
-                        delete personColors.value[oldName];
-                        transactions.value.forEach(tx => { if(tx.person === oldName) tx.person = n; });
-                        promptDialog.show = false;
-                        showToast("Nome atualizado com sucesso!", "success");
-                    } else {
-                        promptDialog.show = false;
-                    }
-                };
-                promptDialog.show = true;
-            };
-
-            const confirmRemovePerson = (p) => {
-                confirmDialog.title = "Remover Pessoa";
-                confirmDialog.message = `Deseja remover ${p} da lista de devedores?`;
-                confirmDialog.onConfirm = () => {
-                    people.value = people.value.filter(x => x !== p);
-                    confirmDialog.show = false;
-                    showToast(`${p} removido(a).`, "info");
-                };
-                confirmDialog.show = true;
-            };
-
-            const handlePersonSelectChange = () => { 
-                if (formTx.person === 'NEW_PERSON') { 
-                    promptDialog.title = "Nova Pessoa";
-                    promptDialog.message = "Digite o nome da pessoa a ser adicionada:";
-                    promptDialog.value = '';
-                    promptDialog.onConfirm = () => {
-                        const n = (promptDialog.value || '').trim();
-                        if (n) {
-                            if (!people.value.includes(n)) people.value.push(n);
-                            formTx.person = n;
-                        } else {
-                            formTx.person = 'Eu';
-                        }
-                        promptDialog.show = false;
-                    };
-                    promptDialog.show = true;
-                } 
-            };
-
-            const clearPastDebts = (person) => {
-                confirmDialog.title = "Quitar Histórico de Dívidas";
-                confirmDialog.message = `Deseja marcar todos os meses ANTERIORES ao mês atual como pagos para ${person}? Isso limpará os saldos devedores passados.`;
-                confirmDialog.onConfirm = () => {
-                    const curMonthStr = new Date().toISOString().slice(0, 7);
-                    let count = 0;
-                    for (const month in projectedInvoices.value) {
-                        if (month < curMonthStr) {
-                            if (projectedInvoices.value[month].byPerson[person] && projectedInvoices.value[month].byPerson[person].total > 0) {
-                                if (!payments.value[month]) payments.value[month] = {};
-                                if (!payments.value[month][person]) {
-                                    payments.value[month][person] = true;
-                                    count++;
-                                }
-                            }
-                        }
-                    }
-                    confirmDialog.show = false;
-                    showToast(`Histórico limpo! ${count} faturas passadas marcadas como pagas.`, "success");
-                };
-                confirmDialog.show = true;
-            };
-
-            const togglePayment = (m, p) => { 
-                if (!payments.value[m]) payments.value[m] = {};
-                if (payments.value[m][p]) delete payments.value[m][p];
-                else payments.value[m][p] = true;
-            };
-
-            const savePixKey = () => {
-                showToast("Chave PIX atualizada!", "success");
-            };
-
-            const exportToWhatsApp = (name, total, items) => {
-                let msg = `💳 *Fatura: ${formatMonthLabel(reportMonth.value)}*\n`;
-                msg += `Olá *${name}*, segue o resumo da sua parte no cartão: *${formatMoney(total)}*\n\n`;
-                msg += `📋 *Detalhamento:*\n`;
-                items.forEach(i => {
-                    msg += `• ${i.desc} ${i.parcelaInfo ? `_(${i.parcelaInfo.replace(/[()]/g, '')})_` : ''}: ${formatMoney(i.amount)}\n`;
-                });
-                
-                if (userPixKey.value && userPixKey.value.trim()) {
-                    msg += `\n⚡ *Chave PIX para pagamento:*\n\`${userPixKey.value.trim()}\`\n`;
-                }
-                
-                msg += `\n_Mensagem gerada pelo Gestor de Faturas_ ✨`;
-                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
-            };
-
-            const exportBackup = () => {
-                const data = { 
-                    appName: 'GestorDeCartoes', 
-                    cards: cards.value, 
-                    people: people.value, 
-                    transactions: transactions.value, 
-                    payments: payments.value, 
-                    personColors: personColors.value,
-                    pixKey: userPixKey.value,
-                    exportedAt: new Date().toISOString()
-                };
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); 
-                a.href = url; 
-                a.download = `Backup_Gestor_${new Date().toISOString().slice(0,10)}.json`; 
-                a.click();
-                showToast("Arquivo de backup baixado com sucesso!", "success");
-            };
-
-            const importBackup = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    try {
-                        const data = JSON.parse(ev.target.result);
-                        if (data.transactions || data.cards) {
-                            cards.value = data.cards || []; 
-                            people.value = data.people || []; 
-                            transactions.value = data.transactions || []; 
-                            payments.value = data.payments || {}; 
-                            personColors.value = data.personColors || {};
-                            userPixKey.value = data.pixKey || '';
-                            showToast("Backup importado com sucesso!", "success");
-                        } else {
-                            showToast("Arquivo JSON inválido.", "error");
-                        }
-                    } catch (err) {
-                        showToast("Falha ao ler arquivo JSON.", "error");
-                    }
-                };
-                reader.readAsText(file);
-            };
-
-            // ==========================================
-            // RECURSOS DE IA & VOZ (GROQ CLOUD)
-            // ==========================================
-            let voiceMediaRecorder = null;
-            let voiceAudioChunks = [];
-            let voiceRecordingInterval = null;
-            let voiceAutoConfirmInterval = null;
-
-            const formatDuration = (sec) => {
-                const m = Math.floor(sec / 60);
-                const s = sec % 60;
-                return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-            };
-
-            const cancelAutoConfirm = () => {
-                if (voiceAutoConfirmInterval) {
-                    clearInterval(voiceAutoConfirmInterval);
-                    voiceAutoConfirmInterval = null;
-                }
-                voiceAutoConfirmTimer.value = 0;
-            };
-
-            const saveGroqSettings = () => {
-                localStorage.setItem('groq_api_key', (groqApiKey.value || '').trim());
-                localStorage.setItem('groq_model', (groqModel.value || '').trim() || 'openai/gpt-oss-120b');
-                localStorage.setItem('groq_auto_confirm', groqAutoConfirm.value ? 'true' : 'false');
-                pushToCloud();
-                showToast("Configurações de IA salvas com sucesso!", "success");
-                if (voiceState.value === 'need_key') {
-                    voiceState.value = 'ready';
-                }
-            };
-
-            const testGroqConnection = async () => {
-                if (!groqApiKey.value || !groqApiKey.value.trim()) {
-                    showToast("Por favor, insira sua chave Groq primeiro.", "error");
-                    return;
-                }
-                groqTesting.value = true;
-                try {
-                    const res = await fetch('https://api.groq.com/openai/v1/models', {
-                        headers: { 'Authorization': `Bearer ${groqApiKey.value.trim()}` }
-                    });
-                    if (res.ok) {
-                        showToast("Conexão com a Groq Cloud realizada com sucesso!", "success");
-                    } else {
-                        const err = await res.json().catch(() => ({}));
-                        showToast(`Erro na Groq: ${err?.error?.message || res.statusText}`, "error");
-                    }
-                } catch (e) {
-                    showToast(`Falha ao conectar: ${e.message}`, "error");
-                } finally {
-                    groqTesting.value = false;
-                }
-            };
-
-            const openVoiceModal = () => {
-                cancelAutoConfirm();
-                voiceErrorMessage.value = '';
-                voiceTranscription.value = '';
-                voiceParsedData.value = null;
-                voiceRecordingDuration.value = 0;
-                if (!groqApiKey.value || !groqApiKey.value.trim()) {
-                    voiceState.value = 'need_key';
-                } else {
-                    voiceState.value = 'ready';
-                }
-                voiceModalOpen.value = true;
-            };
-
-            const closeVoiceModal = () => {
-                cancelAutoConfirm();
-                if (voiceMediaRecorder && voiceMediaRecorder.state === 'recording') {
-                    try { voiceMediaRecorder.stop(); } catch(e){}
-                }
-                if (voiceRecordingInterval) {
-                    clearInterval(voiceRecordingInterval);
-                    voiceRecordingInterval = null;
-                }
-                voiceModalOpen.value = false;
-                voiceState.value = 'ready';
-            };
-
-            const startVoiceRecording = async () => {
-                if (!groqApiKey.value || !groqApiKey.value.trim()) {
-                    voiceState.value = 'need_key';
-                    return;
-                }
-
-                voiceErrorMessage.value = '';
-                voiceTranscription.value = '';
-                voiceParsedData.value = null;
-                voiceRecordingDuration.value = 0;
-                cancelAutoConfirm();
-
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    
-                    let mimeType = 'audio/webm;codecs=opus';
-                    if (!window.MediaRecorder || !MediaRecorder.isTypeSupported(mimeType)) {
-                        if (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
-                        else if (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
-                        else mimeType = '';
-                    }
-
-                    voiceAudioChunks = [];
-                    voiceMediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-
-                    voiceMediaRecorder.ondataavailable = (event) => {
-                        if (event.data && event.data.size > 0) {
-                            voiceAudioChunks.push(event.data);
-                        }
-                    };
-
-                    voiceMediaRecorder.onstop = async () => {
-                        clearInterval(voiceRecordingInterval);
-                        voiceRecordingInterval = null;
-                        stream.getTracks().forEach(track => track.stop());
-
-                        if (voiceAudioChunks.length === 0) {
-                            voiceState.value = 'error';
-                            voiceErrorMessage.value = 'Nenhum áudio foi capturado. Fale novamente.';
-                            return;
-                        }
-
-                        const audioBlob = new Blob(voiceAudioChunks, { type: voiceMediaRecorder.mimeType || 'audio/webm' });
-                        await processVoicePipeline(audioBlob);
-                    };
-
-                    voiceMediaRecorder.start();
-                    voiceState.value = 'recording';
-
-                    voiceRecordingInterval = setInterval(() => {
-                        voiceRecordingDuration.value++;
-                    }, 1000);
-
-                } catch (err) {
-                    console.error("Erro ao iniciar gravação de voz:", err);
-                    voiceState.value = 'error';
-                    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                        voiceErrorMessage.value = 'Permissão de microfone negada. Autorize o microfone no navegador para gravar.';
-                    } else {
-                        voiceErrorMessage.value = `Erro ao acessar microfone: ${err.message}`;
-                    }
-                }
-            };
-
-            const stopVoiceRecording = () => {
-                if (voiceMediaRecorder && voiceMediaRecorder.state === 'recording') {
-                    voiceMediaRecorder.stop();
-                }
-            };
-
-            const cancelVoiceRecording = () => {
-                if (voiceMediaRecorder && voiceMediaRecorder.state === 'recording') {
-                    voiceMediaRecorder.onstop = null;
-                    try { voiceMediaRecorder.stop(); } catch(e){}
-                }
-                if (voiceRecordingInterval) {
-                    clearInterval(voiceRecordingInterval);
-                    voiceRecordingInterval = null;
-                }
-                voiceState.value = 'ready';
-            };
-
-            const processVoicePipeline = async (audioBlob) => {
-                voiceState.value = 'processing';
-                try {
-                    // ETAPA 1: Transcrição com Whisper V3 Large na Groq Cloud
-                    voiceProcessingStep.value = 'Transcrevendo com Whisper V3 Large...';
-                    const text = await transcribeAudioWithWhisper(audioBlob);
-                    if (!text || !text.trim()) {
-                        throw new Error('Não foi possível identificar nenhuma fala no áudio. Fale mais perto do microfone.');
-                    }
-                    voiceTranscription.value = text.trim();
-
-                    // ETAPA 2: Extração Estruturada com Modelo de IA na Groq Cloud
-                    const modelName = groqModel.value || 'openai/gpt-oss-120b';
-                    voiceProcessingStep.value = `Estruturando dados com ${modelName}...`;
-                    const parsedData = await parseExpenseWithGroq(text.trim());
-                    voiceParsedData.value = parsedData;
-
-                    // ETAPA 3: Conclusão e Preparo para Confirmação / Auto-salvamento
-                    voiceState.value = 'review';
-
-                    if (groqAutoConfirm.value) {
-                        voiceAutoConfirmTimer.value = 3;
-                        voiceAutoConfirmInterval = setInterval(() => {
-                            voiceAutoConfirmTimer.value--;
-                            if (voiceAutoConfirmTimer.value <= 0) {
-                                cancelAutoConfirm();
-                                applyVoiceTransaction();
-                            }
-                        }, 1000);
-                    }
-
-                } catch (err) {
-                    console.error("Falha no pipeline de IA da Groq:", err);
-                    voiceState.value = 'error';
-                    voiceErrorMessage.value = err.message || 'Falha ao processar comando de voz.';
-                }
-            };
-
-            const transcribeAudioWithWhisper = async (audioBlob) => {
-                const mimeType = voiceMediaRecorder?.mimeType || 'audio/webm';
-                let ext = 'webm';
-                if (mimeType.includes('mp4')) ext = 'mp4';
-                else if (mimeType.includes('ogg')) ext = 'ogg';
-                else if (mimeType.includes('wav')) ext = 'wav';
-
-                const audioFile = new File([audioBlob], `audio.${ext}`, { type: mimeType });
-                const formData = new FormData();
-                formData.append('file', audioFile);
-                formData.append('model', 'whisper-large-v3');
-                formData.append('language', 'pt');
-                formData.append('response_format', 'json');
-                formData.append('prompt', 'Lançamento de compras no cartão de crédito, faturas, valores em reais, parcelas e nomes de pessoas');
-
-                const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${groqApiKey.value.trim()}`
-                    },
-                    body: formData
-                });
-
-                if (!res.ok) {
-                    const err = await res.json().catch(() => ({}));
-                    throw new Error(err?.error?.message || `Erro no Whisper V3 (${res.status})`);
-                }
-
-                const json = await res.json();
-                return json.text;
-            };
-
-            const parseExpenseWithGroq = async (transcriptionText) => {
-                const cardsList = cards.value.map(c => ({ id: c.id, name: c.name }));
-                const peopleList = people.value;
-                const today = new Date().toISOString().slice(0, 10);
-
-                const systemPrompt = `Você é um assistente financeiro inteligente do app 'Gestor de Faturas'.
-Sua tarefa é analisar a fala do usuário sobre uma despesa ou compra e extrair os dados estruturados com extrema exatidão.
-
-DATA DE REFERÊNCIA (HOJE): ${today}
-CARTÕES CADASTRADOS: ${JSON.stringify(cardsList)}
-PESSOAS CADASTRADAS: ${JSON.stringify(peopleList)}
-
-REGRAS:
-1. "description": Título claro e conciso da despesa ou estabelecimento (ex: "Supermercado", "Almoço", "Tênis Nike", "Gasolina", "Academia").
-2. "amount": Valor monetário em número float positivo (ex: 150.00).
-3. "amountType": "total" (se o valor for o total da compra) ou "installment" (se for o valor falado de cada parcela). Padrão: "total".
-4. "type": "single" (à vista), "installment" (parcelado), ou "subscription" (mensal, assinatura, recorrente).
-5. "installments": Número inteiro de parcelas (mínimo 2 se for parcelado; 1 se for à vista ou assinatura).
-6. "person": Nome da pessoa dona do gasto. Se o usuário disser "eu", "para mim", "minha", use "Eu". Se disser o nome de alguém, procure entre as pessoas cadastradas ou use o nome falado com inicial maiúscula.
-7. "cardId": Se o usuário citou algum cartão, procure o cartão correspondente e retorne o seu "id". Se não mencionou nenhum cartão ou não encontrou, retorne o id do primeiro cartão: "${cardsList[0]?.id || ''}".
-8. "date": Data da compra no formato YYYY-MM-DD. "hoje" = ${today}, "ontem" = dia anterior. Se não informado, use ${today}.
-9. "summary": Frase curta de resumo (ex: "Supermercado de R$ 150,00 em 3x para Eu").
-
-Responda ESTRITAMENTE em formato JSON compatível com a estrutura acima.`;
-
-                const requestedModel = (groqModel.value || 'openai/gpt-oss-120b').trim();
-                const modelsToTry = [requestedModel];
-                if (requestedModel === 'openai/gpt-oss-120b') modelsToTry.push('gpt-oss-120b');
-                else if (requestedModel === 'gpt-oss-120b') modelsToTry.push('openai/gpt-oss-120b');
-                if (!modelsToTry.includes('qwen-2.5-32b')) modelsToTry.push('qwen-2.5-32b');
-                if (!modelsToTry.includes('llama-3.3-70b-versatile')) modelsToTry.push('llama-3.3-70b-versatile');
-
-                let lastError = null;
-                for (const mod of modelsToTry) {
-                    try {
-                        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${groqApiKey.value.trim()}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                model: mod,
-                                messages: [
-                                    { role: 'system', content: systemPrompt },
-                                    { role: 'user', content: transcriptionText }
-                                ],
-                                response_format: { type: 'json_object' },
-                                temperature: 0.1
-                            })
-                        });
-
-                        if (res.ok) {
-                            const data = await res.json();
-                            const content = data.choices?.[0]?.message?.content;
-                            const parsed = JSON.parse(content);
-
-                            if (!parsed.description) parsed.description = 'Compra por voz';
-                            parsed.amount = Number(parsed.amount) || 0;
-                            if (!parsed.type) parsed.type = 'single';
-                            if (!parsed.installments || isNaN(Number(parsed.installments))) {
-                                parsed.installments = parsed.type === 'installment' ? 2 : 1;
-                            } else {
-                                parsed.installments = Number(parsed.installments);
-                            }
-                            if (!parsed.person) parsed.person = 'Eu';
-                            if (!parsed.cardId && cards.value.length > 0) parsed.cardId = cards.value[0].id;
-                            if (!parsed.date) parsed.date = today;
-                            return parsed;
-                        } else {
-                            const errData = await res.json().catch(() => ({}));
-                            lastError = new Error(errData?.error?.message || `Erro no modelo ${mod} (${res.status})`);
-                            if (res.status === 401 || res.status === 403) throw lastError;
-                        }
-                    } catch (e) {
-                        lastError = e;
-                        if (e.message && (e.message.includes('401') || e.message.includes('invalid_api_key'))) {
-                            throw e;
-                        }
-                    }
-                }
-                throw lastError || new Error("Não foi possível interpretar os dados da compra.");
-            };
-
-            const applyVoiceTransaction = () => {
-                cancelAutoConfirm();
-                if (!voiceParsedData.value) return;
-
-                const data = voiceParsedData.value;
-                let personName = (data.person || 'Eu').trim();
-                if (personName.toLowerCase() === 'eu') {
-                    personName = 'Eu';
-                } else {
-                    personName = personName.charAt(0).toUpperCase() + personName.slice(1);
-                }
-
-                // Se a pessoa for nova, adiciona automaticamente à lista
-                if (!people.value.includes(personName)) {
-                    people.value.push(personName);
-                    getPersonColor(personName);
-                }
-
-                // Garante cartão válido
-                let targetCardId = data.cardId;
-                if (!cards.value.some(c => c.id === targetCardId)) {
-                    targetCardId = cards.value[0]?.id || '';
-                }
-
-                const installments = (data.type === 'installment' && Number(data.installments) > 1) 
-                    ? Number(data.installments) 
-                    : 1;
-                const parsedAmt = Number(data.amount) || 0;
-                const finalAmt = (data.type === 'installment' && data.amountType === 'installment') 
-                    ? parsedAmt * installments 
-                    : parsedAmt;
-
-                const newTx = {
-                    id: Date.now().toString(),
-                    description: data.description || 'Compra por voz',
-                    amount: finalAmt,
-                    amountType: data.amountType || 'total',
-                    date: data.date || new Date().toISOString().slice(0, 10),
-                    cardId: targetCardId,
-                    person: personName,
-                    type: data.type || (installments > 1 ? 'installment' : 'single'),
-                    installments: installments
-                };
-
-                transactions.value.push(newTx);
-                pushToCloud();
-                showToast(`Lançamento realizado: ${newTx.description} (${formatMoney(newTx.amount)})`, "success");
-                closeVoiceModal();
-            };
-
-            const editInFormFromVoice = () => {
-                cancelAutoConfirm();
-                if (!voiceParsedData.value) return;
-
-                const data = voiceParsedData.value;
-                let personName = (data.person || 'Eu').trim();
-                if (personName.toLowerCase() === 'eu') {
-                    personName = 'Eu';
-                } else {
-                    personName = personName.charAt(0).toUpperCase() + personName.slice(1);
-                }
-
-                if (!people.value.includes(personName)) {
-                    people.value.push(personName);
-                    getPersonColor(personName);
-                }
-
-                formTx.description = data.description || '';
-                formTx.amount = data.amount || null;
-                formTx.amountType = data.amountType || 'total';
-                formTx.type = data.type || 'single';
-                formTx.installments = data.installments || 2;
-                formTx.person = personName;
-                formTx.cardId = data.cardId || (cards.value[0]?.id || '');
-                formTx.date = data.date || new Date().toISOString().slice(0, 10);
-
-                closeVoiceModal();
-                currentTab.value = 'lancamentos';
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                showToast("Dados transferidos para o formulário. Revise e salve!", "info");
-            };
-
-            return {
-                user, loading, authMode, authForm, handleAuth, logout, syncStatus,
-                currentTab, reportMonth, cards, people, transactions, payments,
-                formCard, formTx, newPerson, isEditingTx, isEditingCard, searchQuery,
-                filteredTransactions, reportStats, profileModalOpen, userPixKey,
-                toast, confirmDialog, promptDialog, showToast,
-                addTransaction, editTransaction, editTransactionById, cancelEditTx, confirmDeleteTx,
-                addCard, editCard, cancelEditCard, confirmDeleteCard,
-                addPerson, openEditPersonModal, confirmRemovePerson, handlePersonSelectChange, clearPastDebts,
-                togglePayment, getPersonColor, currentInvoiceData, formatMoney, formatDate, formatMonthLabel,
-                getCardName, navigateMonth, savePixKey, exportToWhatsApp, exportBackup, importBackup,
-                groqApiKey, groqModel, groqAutoConfirm, showGroqKey, groqTesting,
-                saveGroqSettings, testGroqConnection,
-                voiceModalOpen, voiceState, voiceProcessingStep, voiceRecordingDuration,
-                voiceTranscription, voiceParsedData, voiceAutoConfirmTimer, voiceErrorMessage,
-                openVoiceModal, closeVoiceModal, startVoiceRecording, stopVoiceRecording,
-                cancelVoiceRecording, cancelAutoConfirm, applyVoiceTransaction, editInFormFromVoice, formatDuration
-            };
-        }
-    }).mount('#app');
-
-    // Registrar Service Worker para PWA
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
-    }
-</script>
+<script type="module" src="./app.js"></script>
 </body>
 </html>
