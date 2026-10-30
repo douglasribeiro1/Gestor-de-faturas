@@ -2,7 +2,7 @@
 // - App shell: pré-cache; HTML/JS/CSS usam "rede primeiro" para que atualizações cheguem na hora.
 // - Demais arquivos estáticos e CDNs (fontes, Firebase SDK): "stale-while-revalidate".
 // - Chamadas de API (Firestore, Auth, Groq) nunca passam pelo cache.
-const CACHE_NAME = 'gestor-v20';
+const CACHE_NAME = 'gestor-v21';
 const SHELL = [
     './',
     './index.html',
